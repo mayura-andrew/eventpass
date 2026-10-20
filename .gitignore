@@ -1,0 +1,11 @@
+/data/
+/dist/
+/eventpass
+.env
+*.out
+coverage.*
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
+web/test-results/
+web/playwright-report/

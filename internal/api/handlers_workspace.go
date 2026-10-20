@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Server) getWorkspaceSettings(c *call) error {
-	settings, err := s.opt.Store.Workspace().Settings().All(c.ctx())
+	settings, err := s.store().Workspace().Settings().All(c.ctx())
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (s *Server) patchWorkspaceSettings(c *call) error {
 	if len(errs) > 0 {
 		return validationError(errs)
 	}
-	repo := s.opt.Store.Workspace().Settings()
+	repo := s.store().Workspace().Settings()
 	if err := repo.Set(c.ctx(), req.Settings, c.p.actorID()); err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (s *Server) patchWorkspaceSettings(c *call) error {
 }
 
 func (s *Server) listUsers(c *call) error {
-	users, err := s.opt.Store.Workspace().Users().List(c.ctx())
+	users, err := s.store().Workspace().Users().List(c.ctx())
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (s *Server) newUser(c *call, email, name string, role domain.WorkspaceRole)
 	}
 	u := domain.User{UserID: domain.NewID(), Email: vals["email"], Name: vals["name"], WorkspaceRole: role,
 		Status: domain.UserActive, SessionVersion: 1, CreatedAt: s.opt.Now().UTC()}
-	err := s.opt.Store.Workspace().Users().Create(c.ctx(), u)
+	err := s.store().Workspace().Users().Create(c.ctx(), u)
 	if errors.Is(err, storage.ErrConflict) {
 		return domain.User{}, errorf(http.StatusConflict, "email_taken", "A user with that email already exists.")
 	}
@@ -123,7 +123,7 @@ func (s *Server) patchUser(c *call) error {
 	if err := decode(c.w, c.r, &req); err != nil {
 		return err
 	}
-	users := s.opt.Store.Workspace().Users()
+	users := s.store().Workspace().Users()
 	id := c.r.PathValue("userID")
 	all, err := users.List(c.ctx())
 	if err != nil {
@@ -189,7 +189,7 @@ func (s *Server) listAudit(c *call) error {
 	if v, err := strconv.Atoi(c.r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 1000 {
 		limit = v
 	}
-	entries, err := s.opt.Store.Workspace().Audit().List(c.ctx(), storage.AuditFilter{
+	entries, err := s.store().Workspace().Audit().List(c.ctx(), storage.AuditFilter{
 		EventID: c.r.URL.Query().Get("eventId"), Limit: limit,
 	})
 	if err != nil {
@@ -203,12 +203,18 @@ func (s *Server) listAudit(c *call) error {
 }
 
 func (s *Server) systemHealth(c *call) error {
-	return c.json(http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"status":        "ok",
 		"version":       s.opt.Version,
 		"storage":       s.opt.StorageName,
 		"demo":          s.opt.Demo,
 		"uptimeSeconds": int(s.opt.Now().Sub(s.started) / time.Second),
 		"goVersion":     runtime.Version(),
-	})
+	}
+	if s.opt.HealthExtra != nil {
+		for k, v := range s.opt.HealthExtra() {
+			resp[k] = v
+		}
+	}
+	return c.json(http.StatusOK, resp)
 }

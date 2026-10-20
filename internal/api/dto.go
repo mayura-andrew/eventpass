@@ -34,22 +34,26 @@ func toUser(u domain.User) userJSON {
 }
 
 type eventJSON struct {
-	ID        string            `json:"id"`
-	Slug      string            `json:"slug"`
-	Name      string            `json:"name"`
-	Status    string            `json:"status"`
-	StartsAt  *time.Time        `json:"startsAt,omitempty"`
-	EndsAt    *time.Time        `json:"endsAt,omitempty"`
-	TimeZone  string            `json:"timeZone"`
-	CreatedAt *time.Time        `json:"createdAt,omitempty"`
-	Role      string            `json:"role,omitempty"` // the caller's effective role
-	Settings  map[string]string `json:"settings,omitempty"`
+	ID        string     `json:"id"`
+	Slug      string     `json:"slug"`
+	Name      string     `json:"name"`
+	Status    string     `json:"status"`
+	StartsAt  *time.Time `json:"startsAt,omitempty"`
+	EndsAt    *time.Time `json:"endsAt,omitempty"`
+	TimeZone  string     `json:"timeZone"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	Role      string     `json:"role,omitempty"` // the caller's effective role
+	// SheetConnected is false for a Sheets event without a spreadsheet yet.
+	SheetConnected bool              `json:"sheetConnected"`
+	SpreadsheetID  string            `json:"spreadsheetId,omitempty"`
+	Settings       map[string]string `json:"settings,omitempty"`
 }
 
 func toEvent(e domain.Event, role domain.EventRole) eventJSON {
 	return eventJSON{ID: e.EventID, Slug: e.Slug, Name: e.Name, Status: string(e.Status),
 		StartsAt: tptr(e.StartsAt), EndsAt: tptr(e.EndsAt), TimeZone: e.TimeZone,
-		CreatedAt: tptr(e.CreatedAt), Role: string(role)}
+		CreatedAt: tptr(e.CreatedAt), Role: string(role), SpreadsheetID: e.SpreadsheetID,
+		SheetConnected: true}
 }
 
 type fieldJSON struct {

@@ -96,6 +96,12 @@ var schemaTypes = map[string]any{
 	"EventRoleGrant": roleJSON{},
 	"Registration":   myRegistrationJSON{},
 	"CaughtMail":     mail.Caught{},
+	"Pass":           passJSON{},
+	"OutboxEmail":    outboxJSON{},
+	"SetupState":     SetupState{},
+	"GoogleInput":    GoogleInput{},
+	"SMTPInput":      SMTPInput{},
+	"FieldInput":     fieldInput{},
 }
 
 func TestOpenAPIMatchesTypes(t *testing.T) {

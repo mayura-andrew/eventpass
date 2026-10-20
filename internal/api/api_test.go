@@ -17,6 +17,7 @@ import (
 	"github.com/mayura-andrew/eventpass/internal/auth"
 	"github.com/mayura-andrew/eventpass/internal/domain"
 	"github.com/mayura-andrew/eventpass/internal/mail"
+	"github.com/mayura-andrew/eventpass/internal/pass"
 	"github.com/mayura-andrew/eventpass/internal/storage"
 	"github.com/mayura-andrew/eventpass/internal/storage/memory"
 )
@@ -33,6 +34,8 @@ type fixture struct {
 	event1, event2 string
 	participant    domain.Participant // in event1
 	users          map[string]domain.User
+	keys           *pass.KeyRing
+	notified       []string
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -52,8 +55,14 @@ func newFixture(t *testing.T) *fixture {
 	t.Cleanup(queue.Close)
 	f := &fixture{t: t, store: store, codec: codec, catcher: catcher, queue: queue,
 		event1: info.EventIDs[0], event2: info.EventIDs[1], users: map[string]domain.User{}}
-	f.srv = New(Options{Store: store, Sessions: codec, Links: auth.NewMagicLinks(), Mail: queue,
-		PublicURL: "http://localhost:8080", StorageName: "memory", Demo: true, Catcher: catcher, DemoLogins: info.Emails})
+	keys, err := pass.LoadKeyRing(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.keys = keys
+	f.srv = New(Options{Store: store, Sessions: codec, Links: auth.NewMagicLinks(), Mail: queue, Keys: keys,
+		NotifyOutbox: func(id string) { f.notified = append(f.notified, id) },
+		PublicURL:    "http://localhost:8080", StorageName: "memory", Demo: true, Catcher: catcher, DemoLogins: info.Emails})
 	f.h = f.srv.Handler()
 
 	ws := store.Workspace()
@@ -177,36 +186,51 @@ var (
 )
 
 var matrix = map[string][]string{
-	"GET /setup/status":                                    everyone,
-	"POST /auth/magic-link":                                everyone,
-	"POST /auth/callback":                                  everyone,
-	"POST /auth/logout":                                    everyone,
-	"GET /auth/me":                                         signedIn,
-	"GET /public/events/{slug}":                            everyone,
-	"GET /me/registrations":                                partOnly,
-	"GET /workspace/settings":                              wsAdmins,
-	"PATCH /workspace/settings":                            ownerOnly,
-	"GET /workspace/users":                                 wsAdmins,
-	"POST /workspace/users":                                ownerOnly,
-	"PATCH /workspace/users/{userID}":                      ownerOnly,
-	"GET /workspace/audit":                                 ownerOnly,
-	"GET /system/health":                                   ownerOnly,
-	"GET /events":                                          anyUser,
-	"POST /events":                                         wsAdmins,
-	"GET /events/{eventID}":                                evAll,
-	"PATCH /events/{eventID}":                              evAdmins,
-	"GET /events/{eventID}/roles":                          evAdmins,
-	"POST /events/{eventID}/roles":                         evAdmins,
-	"DELETE /events/{eventID}/roles/{userID}":              evAdmins,
-	"GET /events/{eventID}/fields":                         evAll,
-	"GET /events/{eventID}/checkpoints":                    evAll,
-	"GET /events/{eventID}/participants":                   evReaders,
-	"GET /events/{eventID}/participants/{participantID}":   evAll,
-	"PATCH /events/{eventID}/participants/{participantID}": evAdmins,
-	"GET /events/{eventID}/lookup":                         evScanners,
-	"GET /events/{eventID}/stats":                          evReaders,
-	"GET /events/{eventID}/activity":                       evReaders,
-	"GET /dev/mail":                                        everyone,
+	"GET /setup/status":                                               everyone,
+	"POST /auth/magic-link":                                           everyone,
+	"POST /auth/callback":                                             everyone,
+	"POST /auth/logout":                                               everyone,
+	"GET /auth/me":                                                    signedIn,
+	"GET /public/events/{slug}":                                       everyone,
+	"GET /me/registrations":                                           partOnly,
+	"GET /workspace/settings":                                         wsAdmins,
+	"PATCH /workspace/settings":                                       ownerOnly,
+	"GET /workspace/users":                                            wsAdmins,
+	"POST /workspace/users":                                           ownerOnly,
+	"PATCH /workspace/users/{userID}":                                 ownerOnly,
+	"GET /workspace/audit":                                            ownerOnly,
+	"GET /system/health":                                              ownerOnly,
+	"GET /events":                                                     anyUser,
+	"POST /events":                                                    wsAdmins,
+	"GET /events/{eventID}":                                           evAll,
+	"PATCH /events/{eventID}":                                         evAdmins,
+	"GET /events/{eventID}/roles":                                     evAdmins,
+	"POST /events/{eventID}/roles":                                    evAdmins,
+	"DELETE /events/{eventID}/roles/{userID}":                         evAdmins,
+	"GET /events/{eventID}/fields":                                    evAll,
+	"GET /events/{eventID}/checkpoints":                               evAll,
+	"GET /events/{eventID}/participants":                              evReaders,
+	"GET /events/{eventID}/participants/{participantID}":              evAll,
+	"PATCH /events/{eventID}/participants/{participantID}":            evAdmins,
+	"GET /events/{eventID}/lookup":                                    evScanners,
+	"GET /events/{eventID}/stats":                                     evReaders,
+	"GET /events/{eventID}/activity":                                  evReaders,
+	"GET /dev/mail":                                                   everyone,
+	"POST /setup/google-check":                                        everyone,
+	"POST /setup/smtp-check":                                          everyone,
+	"POST /setup/complete":                                            everyone,
+	"POST /public/events/{slug}/register":                             everyone,
+	"GET /me/events/{eventID}/pass":                                   partOnly,
+	"GET /me/events/{eventID}/pass.png":                               partOnly,
+	"GET /me/events/{eventID}/pass.pdf":                               partOnly,
+	"POST /events/{eventID}/connect-sheet":                            evAdmins,
+	"PUT /events/{eventID}/fields/{key}":                              evAdmins,
+	"DELETE /events/{eventID}/fields/{key}":                           evAdmins,
+	"POST /events/{eventID}/fields/order":                             evAdmins,
+	"POST /events/{eventID}/participants/{participantID}/resend-pass": evAdmins,
+	"GET /events/{eventID}/export.csv":                                evReaders,
+	"GET /events/{eventID}/outbox":                                    evAdmins,
+	"POST /events/{eventID}/outbox/{emailID}/retry":                   evAdmins,
 }
 
 func TestAuthorizationMatrix(t *testing.T) {
@@ -226,6 +250,7 @@ func TestAuthorizationMatrix(t *testing.T) {
 				path := strings.NewReplacer(
 					"{eventID}", f.event1, "{participantID}", f.participant.ParticipantID,
 					"{userID}", f.users["viewer"].UserID, "{slug}", "devfest-2026",
+					"{key}", "tshirt", "{emailID}", "missing",
 				).Replace("/api/v1" + rt.Path)
 				if strings.HasSuffix(path, "/lookup") {
 					path += "?q=ada"

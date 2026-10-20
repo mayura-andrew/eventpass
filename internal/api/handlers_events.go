@@ -5,7 +5,6 @@ package api
 import (
 	"errors"
 	"net/http"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -16,11 +15,11 @@ import (
 
 // visibleEvents lists events the user may open, with their effective role.
 func (s *Server) visibleEvents(c *call) ([]eventJSON, error) {
-	all, err := s.opt.Store.Workspace().Events().List(c.ctx())
+	all, err := s.store().Workspace().Events().List(c.ctx())
 	if err != nil {
 		return nil, err
 	}
-	grants, err := s.opt.Store.Workspace().EventRoles().ListByUser(c.ctx(), c.p.user.UserID)
+	grants, err := s.store().Workspace().EventRoles().ListByUser(c.ctx(), c.p.user.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +33,9 @@ func (s *Server) visibleEvents(c *call) ([]eventJSON, error) {
 		if role == domain.EventNone {
 			continue
 		}
-		out = append(out, toEvent(e, role))
+		ej := toEvent(e, role)
+		ej.SheetConnected = s.sheetConnected(e)
+		out = append(out, ej)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		a, b := out[i].StartsAt, out[j].StartsAt
@@ -85,29 +86,12 @@ func (in eventInput) apply(e *domain.Event) {
 	}
 }
 
-var settingKeyRE = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
-
-// maxCell keeps every value well under the Sheets 50,000-character limit.
-const maxCell = 40000
-
-func validateEventSettings(m map[string]string) map[string]string {
-	errs := map[string]string{}
-	for k, v := range m {
-		if !settingKeyRE.MatchString(k) {
-			errs["settings."+k] = "invalid_key"
-		} else if len(v) > maxCell {
-			errs["settings."+k] = domain.ErrTooLong
-		}
-	}
-	return errs
-}
-
 func (s *Server) createEvent(c *call) error {
 	var in eventInput
 	if err := decode(c.w, c.r, &in); err != nil {
 		return err
 	}
-	settings, err := s.opt.Store.Workspace().Settings().All(c.ctx())
+	settings, err := s.store().Workspace().Settings().All(c.ctx())
 	if err != nil {
 		return err
 	}
@@ -118,31 +102,32 @@ func (s *Server) createEvent(c *call) error {
 	}
 	in.apply(&e)
 	errs := domain.ValidateEvent(e)
-	for k, v := range validateEventSettings(in.Settings) {
+	for k, v := range domain.ValidateEventSettings(in.Settings) {
 		errs[k] = v
 	}
 	if len(errs) > 0 {
 		return validationError(errs)
 	}
-	if err := s.opt.Store.Workspace().Events().Create(c.ctx(), e); err != nil {
+	if err := s.store().Workspace().Events().Create(c.ctx(), e); err != nil {
 		if errors.Is(err, storage.ErrConflict) {
 			return errorf(http.StatusConflict, "slug_taken", "Another event already uses that URL.")
 		}
 		return err
 	}
-	repo, err := s.opt.Store.Event(c.ctx(), e.EventID)
+	// With Sheets the event has no spreadsheet yet; fields, checkpoints and
+	// settings are created when the admin connects one.
+	repo, err := s.store().Event(c.ctx(), e.EventID)
+	if errors.Is(err, storage.ErrNotConnected) {
+		s.audit(c, "event.created", e.EventID, e.EventID, e.Slug)
+		out := toEvent(e, domain.EventAdmin)
+		out.SheetConnected = false
+		return c.json(http.StatusCreated, out)
+	}
 	if err != nil {
 		return err
 	}
-	for _, f := range domain.BuiltinFields() {
-		if err := repo.Fields().Put(c.ctx(), f); err != nil {
-			return err
-		}
-	}
-	for _, cp := range domain.DefaultCheckpoints(domain.NewID) {
-		if err := repo.Checkpoints().Put(c.ctx(), cp); err != nil {
-			return err
-		}
+	if err := initEvent(c, repo); err != nil {
+		return err
 	}
 	if len(in.Settings) > 0 {
 		if err := repo.Settings().Set(c.ctx(), in.Settings, c.p.user.UserID); err != nil {
@@ -154,12 +139,15 @@ func (s *Server) createEvent(c *call) error {
 }
 
 func (s *Server) getEvent(c *call) error {
-	settings, err := c.repo.Settings().All(c.ctx())
-	if err != nil {
-		return err
-	}
 	out := toEvent(c.event, c.role)
-	out.Settings = settings
+	out.SheetConnected = c.repo != nil
+	if c.repo != nil {
+		settings, err := c.repo.Settings().All(c.ctx())
+		if err != nil {
+			return err
+		}
+		out.Settings = settings
+	}
 	return c.json(http.StatusOK, out)
 }
 
@@ -168,10 +156,13 @@ func (s *Server) patchEvent(c *call) error {
 	if err := decode(c.w, c.r, &in); err != nil {
 		return err
 	}
-	if errs := validateEventSettings(in.Settings); len(errs) > 0 {
+	if errs := domain.ValidateEventSettings(in.Settings); len(errs) > 0 {
 		return validationError(errs)
 	}
-	e, err := s.opt.Store.Workspace().Events().Update(c.ctx(), c.event.EventID, func(e *domain.Event) error {
+	if len(in.Settings) > 0 && c.repo == nil {
+		return errSheetNotLinked
+	}
+	e, err := s.store().Workspace().Events().Update(c.ctx(), c.event.EventID, func(e *domain.Event) error {
 		in.apply(e)
 		if errs := domain.ValidateEvent(*e); len(errs) > 0 {
 			return validationError(errs)
@@ -190,13 +181,8 @@ func (s *Server) patchEvent(c *call) error {
 		}
 	}
 	s.audit(c, "event.updated", e.EventID, e.EventID, "")
-	settings, err := c.repo.Settings().All(c.ctx())
-	if err != nil {
-		return err
-	}
-	out := toEvent(e, c.role)
-	out.Settings = settings
-	return c.json(http.StatusOK, out)
+	c.event = e
+	return s.getEvent(c)
 }
 
 type roleJSON struct {
@@ -206,13 +192,13 @@ type roleJSON struct {
 }
 
 func (s *Server) listEventRoles(c *call) error {
-	grants, err := s.opt.Store.Workspace().EventRoles().ListByEvent(c.ctx(), c.event.EventID)
+	grants, err := s.store().Workspace().EventRoles().ListByEvent(c.ctx(), c.event.EventID)
 	if err != nil {
 		return err
 	}
 	out := []roleJSON{}
 	for _, g := range grants {
-		u, err := s.opt.Store.Workspace().Users().Get(c.ctx(), g.UserID)
+		u, err := s.store().Workspace().Users().Get(c.ctx(), g.UserID)
 		if errors.Is(err, storage.ErrNotFound) {
 			continue
 		}
@@ -241,7 +227,7 @@ func (s *Server) putEventRole(c *call) error {
 	if !role.Valid() {
 		return validationError(map[string]string{"role": domain.ErrInvalidOpt})
 	}
-	users := s.opt.Store.Workspace().Users()
+	users := s.store().Workspace().Users()
 	u, err := users.GetByEmail(c.ctx(), strings.TrimSpace(req.Email))
 	if errors.Is(err, storage.ErrNotFound) {
 		u, err = s.newUser(c, req.Email, req.Name, domain.WorkspaceNone)
@@ -254,7 +240,7 @@ func (s *Server) putEventRole(c *call) error {
 	}
 	g := domain.EventRoleGrant{EventID: c.event.EventID, UserID: u.UserID, Role: role,
 		GrantedBy: c.p.user.UserID, GrantedAt: s.opt.Now().UTC()}
-	if err := s.opt.Store.Workspace().EventRoles().Put(c.ctx(), g); err != nil {
+	if err := s.store().Workspace().EventRoles().Put(c.ctx(), g); err != nil {
 		return err
 	}
 	s.audit(c, "event.role_granted", c.event.EventID, u.UserID, "role="+string(role))
@@ -263,7 +249,7 @@ func (s *Server) putEventRole(c *call) error {
 
 func (s *Server) deleteEventRole(c *call) error {
 	userID := c.r.PathValue("userID")
-	if err := s.opt.Store.Workspace().EventRoles().Delete(c.ctx(), c.event.EventID, userID); err != nil {
+	if err := s.store().Workspace().EventRoles().Delete(c.ctx(), c.event.EventID, userID); err != nil {
 		return err
 	}
 	s.audit(c, "event.role_revoked", c.event.EventID, userID, "")

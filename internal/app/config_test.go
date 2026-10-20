@@ -64,3 +64,31 @@ func TestLoadDotEnv(t *testing.T) {
 		t.Fatal("missing file must not be an error")
 	}
 }
+
+func TestSecretsRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	key := []byte("0123456789abcdef0123456789abcdef")
+	if m, err := LoadSecrets(dir, key); err != nil || len(m) != 0 {
+		t.Fatalf("missing file: %v %v", m, err)
+	}
+	if err := SaveSecrets(dir, key, map[string]string{SecretSMTPPass: "app-pass"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveSecrets(dir, key, map[string]string{SecretSystemSheet: "sheet"}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := LoadSecrets(dir, key)
+	if err != nil || m[SecretSMTPPass] != "app-pass" || m[SecretSystemSheet] != "sheet" {
+		t.Fatalf("round trip: %v %v", m, err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "secrets.enc"))
+	if strings.Contains(string(raw), "app-pass") {
+		t.Fatal("secrets stored in clear")
+	}
+	if info, _ := os.Stat(filepath.Join(dir, "secrets.enc")); info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode %v", info.Mode().Perm())
+	}
+	if _, err := LoadSecrets(dir, []byte("another-key-another-key-another-k")); err == nil || !strings.Contains(err.Error(), "EVENTPASS_SECRET_KEY") {
+		t.Fatalf("wrong key: %v", err)
+	}
+}

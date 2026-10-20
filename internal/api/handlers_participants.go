@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mayura-andrew/eventpass/internal/domain"
+	"github.com/mayura-andrew/eventpass/internal/export"
 	"github.com/mayura-andrew/eventpass/internal/storage"
 )
 
@@ -96,6 +97,7 @@ func (s *Server) patchParticipant(c *call) error {
 	}
 	now := s.opt.Now().UTC()
 	var changes []string
+	var from domain.ParticipantStatus
 	p, err := c.repo.Participants().Update(c.ctx(), c.r.PathValue("participantID"), func(p *domain.Participant) error {
 		if req.Status != nil && domain.ParticipantStatus(*req.Status) != p.Status {
 			to := domain.ParticipantStatus(*req.Status)
@@ -103,6 +105,7 @@ func (s *Server) patchParticipant(c *call) error {
 				return errorf(http.StatusConflict, "invalid_transition", "That status change isn't allowed.")
 			}
 			changes = append(changes, "status:"+string(p.Status)+"->"+string(to))
+			from = p.Status
 			applyStatus(p, to, now, c.p.user.UserID)
 		}
 		if req.Notes != nil {
@@ -153,6 +156,13 @@ func (s *Server) patchParticipant(c *call) error {
 	}
 	sort.Strings(changes)
 	s.audit(c, "participant.updated", c.event.EventID, p.ParticipantID, strings.Join(changes, ","))
+	// Approving, promoting from the waitlist or reinstating sends the pass;
+	// moving between active statuses (an undo) doesn't resend anything.
+	if from != "" && !from.Active() {
+		if err := s.enqueueStatusEmail(c, c.event.EventID, c.repo, p); err != nil {
+			return err
+		}
+	}
 	visible, err := s.visibleFields(c)
 	if err != nil {
 		return err
@@ -243,7 +253,7 @@ func (s *Server) activity(c *call) error {
 	if err != nil {
 		return err
 	}
-	audit, err := s.opt.Store.Workspace().Audit().List(c.ctx(), storage.AuditFilter{EventID: c.event.EventID, Limit: limit})
+	audit, err := s.store().Workspace().Audit().List(c.ctx(), storage.AuditFilter{EventID: c.event.EventID, Limit: limit})
 	if err != nil {
 		return err
 	}
@@ -260,4 +270,106 @@ func (s *Server) activity(c *call) error {
 		out = out[:limit]
 	}
 	return c.json(http.StatusOK, map[string]any{"items": out})
+}
+
+// resendPass queues the pass email again, e.g. when it landed in spam.
+func (s *Server) resendPass(c *call) error {
+	p, err := c.repo.Participants().Get(c.ctx(), c.r.PathValue("participantID"))
+	if err != nil {
+		return err
+	}
+	if !p.Status.Active() {
+		return errorf(http.StatusConflict, "pass_inactive", "Only registered participants have a pass to send.")
+	}
+	if err := s.enqueue(c, c.event.EventID, c.repo, p, domain.TemplatePassIssued); err != nil {
+		return err
+	}
+	s.audit(c, "participant.pass_resent", c.event.EventID, p.ParticipantID, "")
+	return c.json(http.StatusAccepted, map[string]bool{"queued": true})
+}
+
+func (s *Server) exportCSV(c *call) error {
+	fields, err := s.visibleFields(c)
+	if err != nil {
+		return err
+	}
+	all, _, err := c.repo.Participants().List(c.ctx(), storage.ParticipantFilter{})
+	if err != nil {
+		return err
+	}
+	// Viewers and staff export only what they may see.
+	level := domain.LevelFor(c.role)
+	for i := range all {
+		for k := range all[i].Custom {
+			if f, ok := findField(fields, k); !ok || !f.VisibleTo(level) {
+				delete(all[i].Custom, k)
+			}
+		}
+	}
+	h := c.w.Header()
+	h.Set("Content-Type", "text/csv; charset=utf-8")
+	h.Set("Content-Disposition", `attachment; filename="`+c.event.Slug+`-participants.csv"`)
+	h.Set("Cache-Control", "no-store")
+	s.audit(c, "participant.exported", c.event.EventID, "", strconv.Itoa(len(all)))
+	return export.Participants(c.w, fields, all)
+}
+
+func findField(fs []domain.Field, key string) (domain.Field, bool) {
+	for _, f := range fs {
+		if f.Key == key {
+			return f, true
+		}
+	}
+	return domain.Field{}, false
+}
+
+type outboxJSON struct {
+	ID            string     `json:"id"`
+	CreatedAt     *time.Time `json:"createdAt,omitempty"`
+	ParticipantID string     `json:"participantId"`
+	To            string     `json:"to"`
+	Template      string     `json:"template"`
+	Status        string     `json:"status"`
+	Attempts      int        `json:"attempts"`
+	NextAttemptAt *time.Time `json:"nextAttemptAt,omitempty"`
+	LastError     string     `json:"lastError,omitempty"`
+	SentAt        *time.Time `json:"sentAt,omitempty"`
+}
+
+func toOutbox(e domain.OutboxEmail) outboxJSON {
+	return outboxJSON{ID: e.EmailID, CreatedAt: tptr(e.CreatedAt), ParticipantID: e.ParticipantID, To: e.To,
+		Template: e.TemplateKey, Status: string(e.Status), Attempts: e.Attempts, NextAttemptAt: tptr(e.NextAttemptAt),
+		LastError: e.LastError, SentAt: tptr(e.SentAt)}
+}
+
+func (s *Server) listOutbox(c *call) error {
+	q := c.r.URL.Query()
+	f := storage.OutboxFilter{Status: domain.OutboxStatus(q.Get("status")), ParticipantID: q.Get("participantId"), Limit: 200}
+	list, err := c.repo.Outbox().List(c.ctx(), f)
+	if err != nil {
+		return err
+	}
+	out := make([]outboxJSON, len(list))
+	for i, e := range list {
+		out[i] = toOutbox(e)
+	}
+	return c.json(http.StatusOK, map[string]any{"emails": out})
+}
+
+// retryEmail puts a failed or cancelled email back in the queue.
+func (s *Server) retryEmail(c *call) error {
+	now := s.opt.Now().UTC()
+	e, err := c.repo.Outbox().Update(c.ctx(), c.r.PathValue("emailID"), func(e *domain.OutboxEmail) error {
+		if e.Status != domain.OutboxFailed && e.Status != domain.OutboxCancelled {
+			return errorf(http.StatusConflict, "not_retryable", "Only failed or cancelled emails can be retried.")
+		}
+		e.Status, e.NextAttemptAt, e.Attempts, e.LastError = domain.OutboxQueued, now, 0, ""
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	s.opt.NotifyOutbox(c.event.EventID)
+	s.audit(c, "email.retried", c.event.EventID, e.EmailID, e.TemplateKey)
+	return c.json(http.StatusOK, toOutbox(e))
 }

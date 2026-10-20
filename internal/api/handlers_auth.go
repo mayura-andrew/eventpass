@@ -16,24 +16,8 @@ import (
 	"github.com/mayura-andrew/eventpass/internal/storage"
 )
 
-func (s *Server) setupStatus(c *call) error {
-	settings, err := s.opt.Store.Workspace().Settings().All(c.ctx())
-	if err != nil {
-		return err
-	}
-	// Branding is public: every page, including sign-in, uses it.
-	resp := map[string]any{
-		"complete": true, "demo": s.opt.Demo, "productName": s.productName(c),
-		"primaryColor": settings["primary_color"], "accentColor": settings["accent_color"],
-	}
-	if s.opt.Demo {
-		resp["demoLogins"] = s.opt.DemoLogins
-	}
-	return c.json(http.StatusOK, resp)
-}
-
 func (s *Server) productName(c *call) string {
-	settings, err := s.opt.Store.Workspace().Settings().All(c.ctx())
+	settings, err := s.store().Workspace().Settings().All(c.ctx())
 	if err == nil && settings["product_name"] != "" {
 		return settings["product_name"]
 	}
@@ -90,7 +74,7 @@ func (s *Server) magicLink(c *call) error {
 // registration in some event (participant).
 func (s *Server) canSignIn(c *call, email string, kind auth.Kind) (bool, error) {
 	if kind == auth.KindUser {
-		u, err := s.opt.Store.Workspace().Users().GetByEmail(c.ctx(), email)
+		u, err := s.store().Workspace().Users().GetByEmail(c.ctx(), email)
 		if errors.Is(err, storage.ErrNotFound) {
 			return false, nil
 		}
@@ -134,7 +118,7 @@ func (s *Server) authCallback(c *call) error {
 	sess := auth.Session{Kind: kind}
 	redirect := "/p"
 	if kind == auth.KindUser {
-		u, err := s.opt.Store.Workspace().Users().GetByEmail(c.ctx(), email)
+		u, err := s.store().Workspace().Users().GetByEmail(c.ctx(), email)
 		if errors.Is(err, storage.ErrNotFound) {
 			return invalid
 		}
@@ -144,7 +128,7 @@ func (s *Server) authCallback(c *call) error {
 		if u.Status != domain.UserActive {
 			return invalid
 		}
-		u, err = s.opt.Store.Workspace().Users().Update(c.ctx(), u.UserID, func(x *domain.User) error {
+		u, err = s.store().Workspace().Users().Update(c.ctx(), u.UserID, func(x *domain.User) error {
 			x.LastLoginAt = s.opt.Now().UTC()
 			return nil
 		})
@@ -225,7 +209,7 @@ type registration struct {
 // registrationsFor finds the participant rows for email across events.
 // Archived events are skipped: their data is on its way out.
 func (s *Server) registrationsFor(c *call, email string) ([]registration, error) {
-	events, err := s.opt.Store.Workspace().Events().List(c.ctx())
+	events, err := s.store().Workspace().Events().List(c.ctx())
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +218,7 @@ func (s *Server) registrationsFor(c *call, email string) ([]registration, error)
 		if e.Status == domain.EventArchived {
 			continue
 		}
-		repo, err := s.opt.Store.Event(c.ctx(), e.EventID)
+		repo, err := s.store().Event(c.ctx(), e.EventID)
 		if err != nil {
 			return nil, err
 		}
@@ -279,34 +263,4 @@ func (s *Server) myRegistrations(c *call) error {
 		out = append(out, myRegistrationJSON{Event: toEvent(r.event, ""), Participant: pj})
 	}
 	return c.json(http.StatusOK, map[string]any{"registrations": out})
-}
-
-// ---- Public ----
-
-func (s *Server) publicEvent(c *call) error {
-	e, err := s.opt.Store.Workspace().Events().GetBySlug(c.ctx(), c.r.PathValue("slug"))
-	if err != nil {
-		return err
-	}
-	switch e.Status {
-	case domain.EventPublished, domain.EventRegistrationClosed, domain.EventFinished:
-	default:
-		return errNotFound
-	}
-	repo, err := s.opt.Store.Event(c.ctx(), e.EventID)
-	if err != nil {
-		return err
-	}
-	settings, err := repo.Settings().All(c.ctx())
-	if err != nil {
-		return err
-	}
-	out := toEvent(e, "")
-	out.Settings = map[string]string{}
-	for _, k := range []string{"description", "venue_name", "venue_address"} {
-		if v := settings[k]; v != "" {
-			out.Settings[k] = v
-		}
-	}
-	return c.json(http.StatusOK, out)
 }

@@ -116,7 +116,7 @@ paths:
           description: A published event
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Event" }
+              schema: { $ref: "#/components/schemas/PublicEvent" }
         "404": { $ref: "#/components/responses/Error" }
 
   /me/registrations:
@@ -525,8 +525,334 @@ paths:
                   messages: { type: array, items: { $ref: "#/components/schemas/CaughtMail" } }
         "404": { $ref: "#/components/responses/Error" }
 
+  /setup/google-check:
+    post:
+      operationId: setupGoogleCheck
+      x-permission: public
+      summary: Wizard step. Checks the service account can open the system spreadsheet. Needs X-Setup-Token.
+      parameters:
+        - $ref: "#/components/parameters/SetupToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GoogleInput" }
+      responses:
+        "200":
+          description: Access works
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [serviceAccountEmail, spreadsheetTitle, spreadsheetId]
+                properties:
+                  serviceAccountEmail: { type: string }
+                  spreadsheetTitle: { type: string }
+                  spreadsheetId: { type: string }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /setup/smtp-check:
+    post:
+      operationId: setupSmtpCheck
+      x-permission: public
+      summary: Wizard step. Logs in to SMTP and sends a test email. Needs X-Setup-Token.
+      parameters:
+        - $ref: "#/components/parameters/SetupToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SMTPInput" }
+      responses:
+        "200":
+          description: Test email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sent]
+                properties:
+                  sent: { type: boolean }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /setup/complete:
+    post:
+      operationId: setupComplete
+      x-permission: public
+      summary: Wizard finish. Saves secrets, creates tabs and the owner, emails the owner a sign-in link.
+      parameters:
+        - $ref: "#/components/parameters/SetupToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [google, smtp, productName, ownerEmail]
+              properties:
+                google: { $ref: "#/components/schemas/GoogleInput" }
+                smtp: { $ref: "#/components/schemas/SMTPInput" }
+                productName: { type: string }
+                timeZone: { type: string }
+                primaryColor: { type: string }
+                ownerEmail: { type: string, format: email }
+                ownerName: { type: string }
+      responses:
+        "200":
+          description: Setup complete
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [complete, ownerEmail]
+                properties:
+                  complete: { type: boolean }
+                  ownerEmail: { type: string }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /public/events/{slug}/register:
+    post:
+      operationId: register
+      x-permission: public
+      summary: Register for a published event. A known email gets "already_registered" and a portal link by email.
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [values]
+              properties:
+                values: { type: object, additionalProperties: { type: string } }
+                consent: { type: boolean }
+                locale: { type: string }
+      responses:
+        "201":
+          description: Registered; status is registered, pending_approval or waitlisted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegisterResult" }
+        "200":
+          description: Already registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegisterResult" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /me/events/{eventID}/pass:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+    get:
+      operationId: getMyPass
+      x-permission: participant
+      responses:
+        "200":
+          description: The participant's pass; token is the QR content
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Pass" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /me/events/{eventID}/pass.png:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+      - { name: download, in: query, schema: { type: string, enum: ["1"] } }
+    get:
+      operationId: getMyPassPng
+      x-permission: participant
+      responses:
+        "200":
+          description: Pass card image
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+
+  /me/events/{eventID}/pass.pdf:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+      - { name: download, in: query, schema: { type: string, enum: ["1"] } }
+    get:
+      operationId: getMyPassPdf
+      x-permission: participant
+      responses:
+        "200":
+          description: Printable A6 pass
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /events/{eventID}/connect-sheet:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+    post:
+      operationId: connectSheet
+      x-permission: event.write
+      summary: Attach an empty spreadsheet (shared with the service account) to the event and create its tabs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [spreadsheet]
+              properties:
+                spreadsheet: { type: string, description: Link or ID }
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /events/{eventID}/fields/{key}:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+      - { name: key, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: putField
+      x-permission: fields.write
+      summary: Create or update a field. The key is the column header and never changes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FieldInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Field" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+    delete:
+      operationId: hideField
+      x-permission: fields.write
+      summary: Hide a field; its column and data stay in the sheet
+      responses:
+        "204": { description: Hidden }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /events/{eventID}/fields/order:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+    post:
+      operationId: orderFields
+      x-permission: fields.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [keys]
+              properties:
+                keys: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: Fields in their new order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fields]
+                properties:
+                  fields: { type: array, items: { $ref: "#/components/schemas/Field" } }
+
+  /events/{eventID}/participants/{participantID}/resend-pass:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+      - { name: participantID, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: resendPass
+      x-permission: participant.write
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued: { type: boolean }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /events/{eventID}/export.csv:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+    get:
+      operationId: exportParticipants
+      x-permission: participant.list
+      responses:
+        "200":
+          description: CSV of participants (formula-safe), with the fields the caller may see
+          content:
+            text/csv:
+              schema: { type: string }
+
+  /events/{eventID}/outbox:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+    get:
+      operationId: listOutbox
+      x-permission: comms.manage
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [queued, sending, sent, failed, cancelled] }
+        - { name: participantId, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Newest first, at most 200
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [emails]
+                properties:
+                  emails: { type: array, items: { $ref: "#/components/schemas/OutboxEmail" } }
+
+  /events/{eventID}/outbox/{emailID}/retry:
+    parameters:
+      - $ref: "#/components/parameters/EventID"
+      - { name: emailID, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: retryEmail
+      x-permission: comms.manage
+      responses:
+        "200":
+          description: Queued again
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OutboxEmail" }
+        "409": { $ref: "#/components/responses/Error" }
+
 components:
   parameters:
+    SetupToken:
+      name: X-Setup-Token
+      in: header
+      required: true
+      description: One-time token printed in the server log at first start
+      schema: { type: string }
     EventID:
       name: eventID
       in: path
@@ -556,6 +882,105 @@ components:
               total: { type: integer }
 
   schemas:
+    GoogleInput:
+      type: object
+      additionalProperties: false
+      properties:
+        credentialsJson: { type: string, description: Pasted service account key; empty when GOOGLE_APPLICATION_CREDENTIALS is set }
+        spreadsheet: { type: string, description: Link or ID }
+
+    SMTPInput:
+      type: object
+      additionalProperties: false
+      properties:
+        host: { type: string }
+        port: { type: integer }
+        username: { type: string }
+        password: { type: string }
+        from: { type: string }
+        testTo: { type: string }
+
+    SetupState:
+      type: object
+      required: [complete, googleConfigured, sheetConfigured, smtpConfigured]
+      properties:
+        complete: { type: boolean }
+        googleConfigured: { type: boolean }
+        serviceAccountEmail: { type: string }
+        sheetConfigured: { type: boolean }
+        smtpConfigured: { type: boolean }
+
+    RegisterResult:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [registered, pending_approval, waitlisted, already_registered] }
+
+    PublicEvent:
+      allOf:
+        - $ref: "#/components/schemas/Event"
+        - type: object
+          required: [registration, spotsLeft, fields]
+          properties:
+            registration: { type: string, enum: [open, not_published, not_yet_open, closed] }
+            spotsLeft: { type: integer, description: "-1 when unlimited" }
+            fields: { type: array, items: { $ref: "#/components/schemas/Field" } }
+            consentText: { type: string }
+            consentVersion: { type: string }
+
+    Pass:
+      type: object
+      required: [token, passId, status, active, fullName, eventName]
+      properties:
+        token: { type: string }
+        passId: { type: string }
+        status: { $ref: "#/components/schemas/ParticipantStatus" }
+        active: { type: boolean }
+        fullName: { type: string }
+        eventName: { type: string }
+        when: { type: string }
+        venue: { type: string }
+        statusLabel: { type: string }
+
+    FieldInput:
+      type: object
+      additionalProperties: false
+      required: [type, label, visibility, editable]
+      properties:
+        type: { type: string }
+        label: { type: string }
+        helpText: { type: string }
+        placeholder: { type: string }
+        required: { type: boolean }
+        options: { type: array, items: { type: string } }
+        validation: { type: object }
+        editable: { type: string, enum: ["no", until, until_checkin, always] }
+        editableUntil: { type: string, format: date-time }
+        visibility: { type: string, enum: [public, participant, staff, admin] }
+        condition:
+          type: object
+          required: [field]
+          properties:
+            field: { type: string }
+            equals: { type: string }
+        order: { type: integer }
+        translations: { type: object }
+
+    OutboxEmail:
+      type: object
+      required: [id, participantId, to, template, status, attempts]
+      properties:
+        id: { type: string }
+        createdAt: { type: string, format: date-time }
+        participantId: { type: string }
+        to: { type: string }
+        template: { type: string }
+        status: { type: string, enum: [queued, sending, sent, failed, cancelled] }
+        attempts: { type: integer }
+        nextAttemptAt: { type: string, format: date-time }
+        lastError: { type: string }
+        sentAt: { type: string, format: date-time }
+
     ErrorResponse:
       type: object
       required: [error]
@@ -584,6 +1009,7 @@ components:
         productName: { type: string }
         primaryColor: { type: string }
         accentColor: { type: string }
+        setup: { $ref: "#/components/schemas/SetupState" }
         demoLogins:
           type: object
           description: Demo mode only; role name to email
@@ -664,6 +1090,8 @@ components:
         createdAt: { type: string, format: date-time }
         role: { $ref: "#/components/schemas/EventRole" }
         settings: { type: object, additionalProperties: { type: string } }
+        sheetConnected: { type: boolean }
+        spreadsheetId: { type: string }
 
     EventInput:
       type: object

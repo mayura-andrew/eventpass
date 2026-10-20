@@ -67,6 +67,7 @@ const (
 	PermCheckpointsWrite  Perm = "checkpoints.write"
 	PermCheckpointRecord  Perm = "checkpoint.record"
 	PermStatsRead         Perm = "stats.read"
+	PermCommsManage       Perm = "comms.manage"
 )
 
 // EventScoped reports whether a permission is checked against a role in one
@@ -90,7 +91,7 @@ var workspacePerms = map[WorkspaceRole]map[Perm]struct{}{
 var eventPerms = map[EventRole]map[Perm]struct{}{
 	EventAdmin: set(PermEventRead, PermEventWrite, PermEventRolesManage, PermParticipantList,
 		PermParticipantView, PermParticipantLookup, PermParticipantWrite, PermFieldsRead,
-		PermFieldsWrite, PermCheckpointsRead, PermCheckpointsWrite, PermCheckpointRecord, PermStatsRead),
+		PermFieldsWrite, PermCheckpointsRead, PermCheckpointsWrite, PermCheckpointRecord, PermStatsRead, PermCommsManage),
 	EventStaff: set(PermEventRead, PermParticipantView, PermParticipantLookup, PermFieldsRead,
 		PermCheckpointsRead, PermCheckpointRecord),
 	EventViewer: set(PermEventRead, PermParticipantList, PermParticipantView, PermFieldsRead,

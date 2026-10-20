@@ -221,3 +221,110 @@ func TestContrast(t *testing.T) {
 		t.Errorf("errs %v warn %v", errs, warn)
 	}
 }
+
+func TestNormalizeTypes(t *testing.T) {
+	blob := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	tests := []struct {
+		f       Field
+		in      string
+		want    string
+		errCode string
+	}{
+		{Field{Type: FieldDate}, "2026-11-01", "2026-11-01", ""},
+		{Field{Type: FieldDate}, "01/11/2026", "", ErrInvalidDate},
+		{Field{Type: FieldPhone}, "+94 77 123 4567", "+94 77 123 4567", ""},
+		{Field{Type: FieldPhone}, "call me", "", ErrInvalidPhone},
+		{Field{Type: FieldPhoto}, blob, blob, ""},
+		{Field{Type: FieldFile}, "../etc/passwd", "", ErrInvalidBlob},
+		{Field{Type: FieldNumber}, "abc", "", ErrInvalidNum},
+		{Field{Type: FieldNumber, Validation: Validation{Min: f64(10)}}, "3", "", ErrTooSmall},
+		{Field{Type: FieldShortText, Validation: Validation{MinLength: 3}}, "ab", "", ErrTooShort},
+		{Field{Type: FieldShortText}, string(make([]rune, 501)), "", ErrTooLong},
+		{Field{Type: FieldLongText, Validation: Validation{MaxLength: 5}}, "abcdef", "", ErrTooLong},
+		{Field{Type: FieldMultiSel, Options: []string{"a"}, Required: true}, " ; ", "", ErrRequired},
+		{Field{Type: FieldCheckbox}, "yes", "", ErrInvalidBool},
+		{Field{Type: FieldURL}, "https://example.org/x", "https://example.org/x", ""},
+		{Field{Type: FieldPhone, Validation: Validation{Pattern: `^\+94`}}, "077 123 4567", "", ErrPattern},
+		{Field{Type: "mystery"}, "x", "", ErrInvalidOpt},
+	}
+	for _, tt := range tests {
+		got, err := normalizeOne(tt.f, tt.in)
+		code := ""
+		if err != nil {
+			code = err.Code
+		}
+		if got != tt.want || code != tt.errCode {
+			t.Errorf("%s(%q) = %q, %q; want %q, %q", tt.f.Type, tt.in, got, code, tt.want, tt.errCode)
+		}
+	}
+}
+
+func TestConditionEquals(t *testing.T) {
+	f := Field{Condition: &Condition{Field: "langs", Equals: "Go"}}
+	if !ConditionMet(f, map[string]string{"langs": "Python; Go"}) || ConditionMet(f, map[string]string{"langs": "Python"}) {
+		t.Error("Equals must match one multi-select value")
+	}
+	if !ConditionMet(Field{}, nil) {
+		t.Error("no condition means always shown")
+	}
+}
+
+func TestEditableNowBranches(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		f      Field
+		status ParticipantStatus
+		ok     bool
+		why    string
+	}{
+		{Field{Type: FieldShortText, Editable: EditableAlways, Visibility: VisibilityStaff}, StatusCheckedIn, true, ""},
+		{Field{Type: FieldShortText, Editable: EditableNo, Visibility: VisibilityStaff}, StatusRegistered, false, "not_editable"},
+		{Field{Type: FieldShortText, Editable: EditableAlways, Visibility: VisibilityAdmin}, StatusRegistered, false, "not_editable"},
+		{Field{Type: FieldSection, Editable: EditableAlways}, StatusRegistered, false, "not_editable"},
+		{Field{Type: FieldShortText, Editable: EditableAlways, Visibility: VisibilityStaff}, StatusCancelled, false, "registration_inactive"},
+		{Field{Type: FieldShortText, Editable: EditableUntilCheckIn, Visibility: VisibilityStaff}, StatusConfirmed, true, ""},
+	}
+	for i, c := range cases {
+		ok, why := c.f.EditableNow(now, c.status)
+		if ok != c.ok || why != c.why {
+			t.Errorf("case %d: got %v %q, want %v %q", i, ok, why, c.ok, c.why)
+		}
+	}
+}
+
+func TestStatusHelpers(t *testing.T) {
+	for _, s := range AllStatuses {
+		if !s.Valid() {
+			t.Errorf("%s should be valid", s)
+		}
+	}
+	if ParticipantStatus("gone").Valid() || StatusWaitlisted.Active() || !StatusConfirmed.Active() {
+		t.Error("status helpers wrong")
+	}
+	if !WorkspaceOwner.Valid() || WorkspaceRole("root").Valid() || !EventViewer.Valid() || EventNone.Valid() {
+		t.Error("role validity wrong")
+	}
+	if LevelFor(EventAdmin) != LevelAdmin || LevelFor(EventViewer) != LevelStaff {
+		t.Error("LevelFor wrong")
+	}
+	if (Field{Visibility: VisibilityAdmin}).VisibleToParticipant() || !(Field{Visibility: VisibilityParticipant}).VisibleToParticipant() {
+		t.Error("participant visibility wrong")
+	}
+	fs := []Field{{Key: "b", Order: 2}, {Key: "z", Order: 1}, {Key: "a", Order: 2}}
+	SortFields(fs)
+	if fs[0].Key != "z" || fs[1].Key != "a" || fs[2].Key != "b" {
+		t.Errorf("SortFields = %v", fs)
+	}
+	if got := (FieldError{Code: "x", Message: "y"}).String(); got != "x(y)" {
+		t.Errorf("FieldError.String = %q", got)
+	}
+	p := Participant{Bookmarks: []string{"s1"}, Custom: map[string]string{"k": "v"}}
+	c := p.Clone()
+	c.Bookmarks[0], c.Custom["k"] = "changed", "changed"
+	if p.Bookmarks[0] != "s1" || p.Custom["k"] != "v" {
+		t.Error("Clone must deep-copy")
+	}
+	if !ValidColor("#A1b2C3") || ValidColor("red") {
+		t.Error("ValidColor wrong")
+	}
+}

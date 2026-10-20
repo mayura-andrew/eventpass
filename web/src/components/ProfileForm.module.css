@@ -1,0 +1,45 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+.section {
+  margin: 8px 0 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.req {
+  color: var(--ink-2);
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-height: 32px;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex: none;
+  accent-color: var(--primary);
+}
+
+.choices {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+
+.choices legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.textarea {
+  min-height: 112px;
+  resize: vertical;
+}

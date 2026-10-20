@@ -1,0 +1,11 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+.card {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: #fff;
+}

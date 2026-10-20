@@ -418,10 +418,359 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/setup/google-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Wizard step. Checks the service account can open the system spreadsheet. Needs X-Setup-Token. */
+    post: operations["setupGoogleCheck"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/setup/smtp-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Wizard step. Logs in to SMTP and sends a test email. Needs X-Setup-Token. */
+    post: operations["setupSmtpCheck"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/setup/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Wizard finish. Saves secrets, creates tabs and the owner, emails the owner a sign-in link. */
+    post: operations["setupComplete"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/public/events/{slug}/register": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Register for a published event. A known email gets "already_registered" and a portal link by email. */
+    post: operations["register"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/events/{eventID}/pass": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    get: operations["getMyPass"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/events/{eventID}/pass.png": {
+    parameters: {
+      query?: {
+        download?: "1";
+      };
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    get: operations["getMyPassPng"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/events/{eventID}/pass.pdf": {
+    parameters: {
+      query?: {
+        download?: "1";
+      };
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    get: operations["getMyPassPdf"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{eventID}/connect-sheet": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Attach an empty spreadsheet (shared with the service account) to the event and create its tabs */
+    post: operations["connectSheet"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{eventID}/fields/{key}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+        key: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    /** Create or update a field. The key is the column header and never changes. */
+    put: operations["putField"];
+    post?: never;
+    /** Hide a field; its column and data stay in the sheet */
+    delete: operations["hideField"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{eventID}/fields/order": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["orderFields"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{eventID}/participants/{participantID}/resend-pass": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+        participantID: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["resendPass"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{eventID}/export.csv": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    get: operations["exportParticipants"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{eventID}/outbox": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    get: operations["listOutbox"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/events/{eventID}/outbox/{emailID}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+        emailID: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["retryEmail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    GoogleInput: {
+      /** @description Pasted service account key; empty when GOOGLE_APPLICATION_CREDENTIALS is set */
+      credentialsJson?: string;
+      /** @description Link or ID */
+      spreadsheet?: string;
+    };
+    SMTPInput: {
+      host?: string;
+      port?: number;
+      username?: string;
+      password?: string;
+      from?: string;
+      testTo?: string;
+    };
+    SetupState: {
+      complete: boolean;
+      googleConfigured: boolean;
+      serviceAccountEmail?: string;
+      sheetConfigured: boolean;
+      smtpConfigured: boolean;
+    };
+    RegisterResult: {
+      /** @enum {string} */
+      status: "registered" | "pending_approval" | "waitlisted" | "already_registered";
+    };
+    PublicEvent: components["schemas"]["Event"] & {
+      /** @enum {string} */
+      registration: "open" | "not_published" | "not_yet_open" | "closed";
+      /** @description -1 when unlimited */
+      spotsLeft: number;
+      fields: components["schemas"]["Field"][];
+      consentText?: string;
+      consentVersion?: string;
+    };
+    Pass: {
+      token: string;
+      passId: string;
+      status: components["schemas"]["ParticipantStatus"];
+      active: boolean;
+      fullName: string;
+      eventName: string;
+      when?: string;
+      venue?: string;
+      statusLabel?: string;
+    };
+    Validation: {
+      minLength?: number;
+      maxLength?: number;
+      min?: number;
+      max?: number;
+      pattern?: string;
+      patternMessage?: string;
+      maxFileMB?: number;
+    };
+    FieldInput: {
+      type: string;
+      label: string;
+      helpText?: string;
+      placeholder?: string;
+      required?: boolean;
+      options?: string[];
+      validation?: components["schemas"]["Validation"];
+      /** @enum {string} */
+      editable: "no" | "until" | "until_checkin" | "always";
+      /** Format: date-time */
+      editableUntil?: string;
+      /** @enum {string} */
+      visibility: "public" | "participant" | "staff" | "admin";
+      condition?: {
+        field: string;
+        equals?: string;
+      };
+      order?: number;
+      translations?: Record<string, never>;
+    };
+    OutboxEmail: {
+      id: string;
+      /** Format: date-time */
+      createdAt?: string;
+      participantId: string;
+      to: string;
+      template: string;
+      /** @enum {string} */
+      status: "queued" | "sending" | "sent" | "failed" | "cancelled";
+      attempts: number;
+      /** Format: date-time */
+      nextAttemptAt?: string;
+      lastError?: string;
+      /** Format: date-time */
+      sentAt?: string;
+    };
     ErrorResponse: {
       error: {
         code: string;
@@ -446,6 +795,7 @@ export interface components {
       productName: string;
       primaryColor?: string;
       accentColor?: string;
+      setup?: components["schemas"]["SetupState"];
       /** @description Demo mode only; role name to email */
       demoLogins?: {
         [key: string]: string;
@@ -516,6 +866,10 @@ export interface components {
       settings?: {
         [key: string]: string;
       };
+      sheetConnected?: boolean;
+      spreadsheetId?: string;
+      /** @description Admins only, while no spreadsheet is connected; share the event's spreadsheet with this address */
+      serviceAccountEmail?: string;
     };
     EventInput: {
       name?: string;
@@ -559,15 +913,7 @@ export interface components {
       placeholder?: string;
       required: boolean;
       options?: string[];
-      validation: {
-        minLength?: number;
-        maxLength?: number;
-        min?: number;
-        max?: number;
-        pattern?: string;
-        patternMessage?: string;
-        maxFileMB?: number;
-      };
+      validation: components["schemas"]["Validation"];
       /** @enum {string} */
       editable: "no" | "until" | "until_checkin" | "always";
       /** Format: date-time */
@@ -696,6 +1042,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description One-time token printed in the server log at first start */
+    SetupToken: string;
     EventID: string;
   };
   requestBodies: never;
@@ -845,7 +1193,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Event"];
+          "application/json": components["schemas"]["PublicEvent"];
         };
       };
       404: components["responses"]["Error"];
@@ -1440,6 +1788,441 @@ export interface operations {
         };
       };
       404: components["responses"]["Error"];
+    };
+  };
+  setupGoogleCheck: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description One-time token printed in the server log at first start */
+        "X-Setup-Token": components["parameters"]["SetupToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GoogleInput"];
+      };
+    };
+    responses: {
+      /** @description Access works */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            serviceAccountEmail: string;
+            spreadsheetTitle: string;
+            spreadsheetId: string;
+          };
+        };
+      };
+      403: components["responses"]["Error"];
+      409: components["responses"]["Error"];
+      422: components["responses"]["Error"];
+    };
+  };
+  setupSmtpCheck: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description One-time token printed in the server log at first start */
+        "X-Setup-Token": components["parameters"]["SetupToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SMTPInput"];
+      };
+    };
+    responses: {
+      /** @description Test email sent */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            sent: boolean;
+          };
+        };
+      };
+      403: components["responses"]["Error"];
+      422: components["responses"]["Error"];
+    };
+  };
+  setupComplete: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description One-time token printed in the server log at first start */
+        "X-Setup-Token": components["parameters"]["SetupToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          google: components["schemas"]["GoogleInput"];
+          smtp: components["schemas"]["SMTPInput"];
+          productName: string;
+          timeZone?: string;
+          primaryColor?: string;
+          /** Format: email */
+          ownerEmail: string;
+          ownerName?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Setup complete */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            complete: boolean;
+            ownerEmail: string;
+          };
+        };
+      };
+      403: components["responses"]["Error"];
+      409: components["responses"]["Error"];
+      422: components["responses"]["Error"];
+    };
+  };
+  register: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          values: {
+            [key: string]: string;
+          };
+          consent?: boolean;
+          locale?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Already registered */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RegisterResult"];
+        };
+      };
+      /** @description Registered; status is registered, pending_approval or waitlisted */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RegisterResult"];
+        };
+      };
+      404: components["responses"]["Error"];
+      409: components["responses"]["Error"];
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["Error"];
+    };
+  };
+  getMyPass: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The participant's pass; token is the QR content */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Pass"];
+        };
+      };
+      404: components["responses"]["Error"];
+    };
+  };
+  getMyPassPng: {
+    parameters: {
+      query?: {
+        download?: "1";
+      };
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Pass card image */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/png": string;
+        };
+      };
+    };
+  };
+  getMyPassPdf: {
+    parameters: {
+      query?: {
+        download?: "1";
+      };
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Printable A6 pass */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+    };
+  };
+  connectSheet: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Link or ID */
+          spreadsheet: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Connected */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Event"];
+        };
+      };
+      409: components["responses"]["Error"];
+      422: components["responses"]["Error"];
+    };
+  };
+  putField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FieldInput"];
+      };
+    };
+    responses: {
+      /** @description Saved */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Field"];
+        };
+      };
+      409: components["responses"]["Error"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  hideField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Hidden */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      404: components["responses"]["Error"];
+      409: components["responses"]["Error"];
+    };
+  };
+  orderFields: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          keys: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description Fields in their new order */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            fields: components["schemas"]["Field"][];
+          };
+        };
+      };
+    };
+  };
+  resendPass: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+        participantID: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Queued */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            queued: boolean;
+          };
+        };
+      };
+      409: components["responses"]["Error"];
+    };
+  };
+  exportParticipants: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description CSV of participants (formula-safe), with the fields the caller may see */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/csv": string;
+        };
+      };
+    };
+  };
+  listOutbox: {
+    parameters: {
+      query?: {
+        status?: "queued" | "sending" | "sent" | "failed" | "cancelled";
+        participantId?: string;
+      };
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Newest first, at most 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            emails: components["schemas"]["OutboxEmail"][];
+          };
+        };
+      };
+    };
+  };
+  retryEmail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventID: components["parameters"]["EventID"];
+        emailID: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Queued again */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OutboxEmail"];
+        };
+      };
+      409: components["responses"]["Error"];
     };
   };
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, NavLink, Outlet, Route, Routes, useNavigate } from "react-router";
 import { NotFound } from "../../App";
@@ -11,9 +12,12 @@ import { useMe, useSetup } from "../../session";
 import s from "./admin.module.css";
 import { AuditPage } from "./AuditPage";
 import { EventLayout, EventOverview } from "./EventPages";
+import { EventSettingsPage } from "./EventSettingsPage";
 import { EventsPage } from "./EventsPage";
+import { FormPage } from "./FormPage";
 import { ParticipantsPage } from "./ParticipantsPage";
 import { SettingsPage } from "./SettingsPage";
+import { SetupWizard } from "./SetupWizard";
 import { StaffPage } from "./StaffPage";
 import { SystemPage } from "./SystemPage";
 import { UsersPage } from "./UsersPage";
@@ -21,12 +25,28 @@ import { UsersPage } from "./UsersPage";
 export default function AdminArea() {
   return (
     <Routes>
-      <Route path="login" element={<LoginPage audience="staff" />} />
-      <Route element={<Shell />}>
+      <Route path="setup" element={<SetupWizard />} />
+      <Route
+        path="login"
+        element={
+          <NeedsSetup>
+            <LoginPage audience="staff" />
+          </NeedsSetup>
+        }
+      />
+      <Route
+        element={
+          <NeedsSetup>
+            <Shell />
+          </NeedsSetup>
+        }
+      >
         <Route index element={<EventsPage />} />
         <Route path="events/:eventId" element={<EventLayout />}>
           <Route index element={<EventOverview />} />
           <Route path="participants" element={<ParticipantsPage />} />
+          <Route path="form" element={<FormPage />} />
+          <Route path="settings" element={<EventSettingsPage />} />
           <Route path="staff" element={<StaffPage />} />
         </Route>
         <Route path="users" element={<UsersPage />} />
@@ -37,6 +57,14 @@ export default function AdminArea() {
       </Route>
     </Routes>
   );
+}
+
+/** Sends a fresh install to the setup wizard before anything else. */
+function NeedsSetup({ children }: { children: ReactNode }) {
+  const setup = useSetup();
+  if (setup.isPending) return <Loading />;
+  if (setup.data && !setup.data.complete && !setup.data.demo) return <Navigate to="/admin/setup" replace />;
+  return <>{children}</>;
 }
 
 /** Hook for pages: the signed-in user's workspace permissions. */

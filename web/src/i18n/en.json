@@ -17,7 +17,9 @@
     "goHome": "Go to the start page",
     "saved": "Saved.",
     "close": "Close",
-    "showing": "Showing {{from}}–{{to}} of {{total}}"
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "errors": {
     "unauthenticated": "Sign in to continue.",
@@ -35,7 +37,17 @@
     "invalid_transition": "That status change isn't allowed.",
     "network": "Can't reach the server. Check your connection.",
     "internal": "Something went wrong. Try again.",
-    "conflict": "That value is already in use."
+    "conflict": "That value is already in use.",
+    "setup_required": "Finish the setup wizard first.",
+    "setup_complete": "Setup is already complete.",
+    "setup_token_invalid": "That setup token doesn't match the one in the server log.",
+    "check_failed": "The check failed.",
+    "sheet_not_connected": "Connect a spreadsheet to this event first.",
+    "field_locked": "People have already registered, so this field's type can't change. Add a new field instead.",
+    "builtin_locked": "Name and email are built in and can't be removed or retyped.",
+    "registration_not_published": "Registration isn't open yet.",
+    "registration_not_yet_open": "Registration hasn't opened yet.",
+    "registration_closed": "Registration is closed."
   },
   "fieldErrors": {
     "required": "Required.",
@@ -56,7 +68,15 @@
     "invalid_length": "Must be 1–120 characters.",
     "invalid_color": "Use a color like #1B4DDB.",
     "unknown_setting": "Unknown setting.",
-    "ends_before_start": "Ends before it starts."
+    "ends_before_start": "Ends before it starts.",
+    "invalid_key": "Use lowercase letters, digits and _, starting with a letter (max 40).",
+    "key_taken": "Another field already uses this key.",
+    "unknown_field": "That field doesn't exist.",
+    "not_available_yet": "Photo and file uploads arrive in a later version.",
+    "reserved_key": "This key is reserved; choose another.",
+    "self_reference": "A field can't depend on itself.",
+    "options_required": "Add at least one option.",
+    "invalid_pattern": "That pattern isn't a valid regular expression."
   },
   "status": {
     "pending_approval": "Pending approval",
@@ -135,7 +155,10 @@
       "doneOf": "{{done}} of {{total}}",
       "activity": "Recent activity",
       "noActivity": "Nothing has happened yet. Scans and admin changes appear here.",
-      "publicPage": "Public page"
+      "publicPage": "Public page",
+      "form": "Form",
+      "settings": "Settings",
+      "connectFirst": "This event has no spreadsheet yet. Connect one in"
     },
     "participants": {
       "title": "Participants",
@@ -203,13 +226,90 @@
       "storage": "Storage",
       "uptime": "Uptime",
       "demo": "Demo mode"
+    },
+    "form": {
+      "title": "Registration form",
+      "intro": "These fields become the form participants fill in and the columns of the Participants tab. A field's key is its column header and never changes.",
+      "add": "Add field",
+      "fields": "Form fields",
+      "edit": "Edit",
+      "editField": "Edit {{label}}",
+      "moveUp": "Move {{label}} up",
+      "moveDown": "Move {{label}} down",
+      "hide": "Remove field",
+      "hideConfirm": "Remove “{{label}}” from the form? Its column and data stay in the spreadsheet, and you can restore it.",
+      "hidden": "Removed fields",
+      "hiddenIntro": "Removed fields keep their column and data. Restore one to put it back on the form.",
+      "restore": "Restore",
+      "preview": "Preview",
+      "previewSize": "Preview size",
+      "phone": "Phone",
+      "desktop": "Desktop",
+      "label": "Label",
+      "key": "Key",
+      "keyHint": "The column header in the spreadsheet. It can't change later.",
+      "keyFixed": "fixed once created",
+      "type": "Type",
+      "options": "Options",
+      "optionsHint": "One per line.",
+      "required": "Required",
+      "placeholder": "Placeholder",
+      "helpText": "Help text",
+      "visibility": "Who can see it",
+      "editable": "Can participants change it later?",
+      "editableUntil": "Editable until",
+      "condition": "Show only when",
+      "conditionField": "Another field",
+      "always": "Always show",
+      "conditionEquals": "Has the value",
+      "conditionEqualsHint": "Leave empty for “has any value”."
+    },
+    "eventSettings": {
+      "title": "Event settings",
+      "basics": "Basics",
+      "status": "Status",
+      "publishNeedsSheet": "Connect a spreadsheet before publishing.",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "timeZone": "Time zone",
+      "timeZoneHint": "An IANA name such as Asia/Colombo. Times show in this zone.",
+      "venue": "Venue and contact",
+      "venueName": "Venue name",
+      "venueAddress": "Address",
+      "description": "Description",
+      "supportEmail": "Contact email for participants",
+      "registration": "Registration",
+      "mode": "Mode",
+      "modeOpen": "Open: everyone who registers gets a pass",
+      "modeApproval": "Approval: an admin approves each registration",
+      "capacity": "Capacity",
+      "capacityHint": "Leave empty for no limit. When full, new registrations join the waitlist.",
+      "opens": "Registration opens",
+      "closes": "Registration closes",
+      "consent": "Consent text",
+      "consentHint": "Shown above a required checkbox. Changing it starts a new version (current: {{version}})."
+    },
+    "connect": {
+      "title": "Connect a spreadsheet",
+      "step1": "In Google Sheets, create a new, empty spreadsheet for this event.",
+      "step2": "Share it as Editor with the EventPass service account:",
+      "step3": "Paste the spreadsheet's link below. EventPass creates every tab.",
+      "link": "Spreadsheet link",
+      "submit": "Connect",
+      "connecting": "Connecting…"
     }
   },
   "portal": {
     "title": "Your events",
     "empty": "No registrations found for {{email}}.",
     "passId": "Pass ID",
-    "comingSoon": "Your QR pass, schedule and map appear here once the organizer issues passes."
+    "openPass": "Open pass",
+    "pass": "Pass",
+    "inactive": "This pass isn't valid for entry. Contact the organizers if this is a mistake.",
+    "passAlt": "Pass for {{name}}, pass ID {{passId}}, with a QR code",
+    "showAtEntrance": "Show this QR code at the entrance. Turn your screen brightness up.",
+    "downloadPng": "Download image",
+    "downloadPdf": "Download PDF"
   },
   "scan": {
     "title": "Scanner",
@@ -218,6 +318,135 @@
   "public": {
     "notFound": "This event isn't open to the public.",
     "venue": "Venue",
-    "registrationSoon": "Registration opens here soon."
+    "about": "About this event",
+    "register": "Register",
+    "registering": "Registering…",
+    "spotsLeft_one": "{{count}} spot left",
+    "spotsLeft_other": "{{count}} spots left",
+    "fixErrors": "Some answers need fixing. They're marked below.",
+    "consent": "I agree",
+    "consentRequired": "You need to agree to register.",
+    "reg": {
+      "not_published": "Registration isn't open yet.",
+      "not_yet_open": "Registration hasn't opened yet. Check back soon.",
+      "closed": "Registration is closed."
+    },
+    "done": {
+      "registered": {
+        "title": "You're registered",
+        "body": "Your pass for {{event}} is on its way to your inbox."
+      },
+      "pending_approval": {
+        "title": "Registration received",
+        "body": "The organizers of {{event}} will review your registration. You'll get an email when they do."
+      },
+      "waitlisted": {
+        "title": "You're on the waitlist",
+        "body": "{{event}} is full. We'll email you if a spot opens up."
+      },
+      "already_registered": {
+        "title": "Check your inbox",
+        "body": "If this email is registered for {{event}}, we've sent a sign-in link to your portal."
+      }
+    },
+    "checkSpam": "Can't find the email? Check your spam or promotions folder.",
+    "openPortal": "Open your portal"
+  },
+  "form": {
+    "required": "required",
+    "choose": "Choose…",
+    "uploadsLater": "Uploads aren't available yet."
+  },
+  "fieldTypes": {
+    "short_text": "Short text",
+    "long_text": "Long text",
+    "email": "Email",
+    "phone": "Phone",
+    "number": "Number",
+    "date": "Date",
+    "single_select": "Single choice",
+    "multi_select": "Multiple choice",
+    "checkbox": "Checkbox",
+    "consent": "Consent",
+    "url": "Link (URL)",
+    "photo": "Photo",
+    "file": "File (PDF)",
+    "section": "Section heading"
+  },
+  "visibility": {
+    "public": "On the pass",
+    "participant": "Participant and admins",
+    "staff": "Staff can see",
+    "admin": "Admins only"
+  },
+  "editable": {
+    "no": "Not editable after registering",
+    "until": "Editable until a date",
+    "until_checkin": "Editable until check-in",
+    "always": "Always editable"
+  },
+  "setup": {
+    "progress": "Step {{step}} of {{total}}",
+    "checking": "Checking…",
+    "welcome": {
+      "title": "Set up EventPass",
+      "body": "This wizard connects Google Sheets and email and creates your owner account. It takes about ten minutes.",
+      "token": "Setup token",
+      "tokenHint": "Printed in the server log when EventPass started (look for “setup needed”)."
+    },
+    "google": {
+      "title": "Connect Google Sheets",
+      "step1": "In Google Cloud, create a project, enable the Google Sheets API and create a service account with a JSON key.",
+      "step2": "Create an empty spreadsheet for the workspace and share it as Editor with the service account's email.",
+      "step3": "Paste the key and the spreadsheet link here.",
+      "key": "Service account key (JSON)",
+      "keyHint": "It's stored encrypted on the server and never shown again.",
+      "keyFromEnv": "The service account key comes from GOOGLE_APPLICATION_CREDENTIALS.",
+      "shareWith": "Share spreadsheets with",
+      "sheet": "Workspace spreadsheet link",
+      "sheetHint": "EventPass creates its tabs in this spreadsheet.",
+      "check": "Check access",
+      "ok": "Connected to “{{title}}”."
+    },
+    "smtp": {
+      "title": "Connect email",
+      "intro": "Passes and sign-in links are sent through your email provider. We'll send a test email.",
+      "provider": "Provider",
+      "env": "From SMTP_* environment variables",
+      "gmailHint": "For Gmail, turn on 2-Step Verification and create an App Password; use it as the password.",
+      "presets": {
+        "gmail": "Gmail",
+        "workspace": "Google Workspace",
+        "brevo": "Brevo",
+        "mailgun": "Mailgun",
+        "ses": "Amazon SES",
+        "custom": "Other"
+      },
+      "host": "SMTP server",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password or App Password",
+      "from": "From",
+      "fromHint": "For example: DevClub <club@gmail.com>",
+      "testTo": "Send a test email to",
+      "send": "Send test email",
+      "ok": "Test email sent to {{email}}. Check it arrived before continuing."
+    },
+    "workspace": {
+      "title": "Workspace and owner",
+      "productName": "Product name",
+      "productNameHint": "Shown in the control panel, emails and passes.",
+      "color": "Primary color",
+      "colorHint": "A hex color such as #1B4DDB.",
+      "owner": "Owner account",
+      "ownerEmail": "Your email",
+      "ownerName": "Your name",
+      "finish": "Finish setup"
+    },
+    "done": {
+      "title": "Setup complete",
+      "body": "We sent a sign-in link to {{email}}. Open it to sign in as the owner.",
+      "signIn": "Go to sign-in"
+    }
   }
 }

@@ -2,34 +2,50 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 
-type Caught = { id: string; to: string; text: string };
+export type Caught = {
+  id: string;
+  to: string;
+  subject: string;
+  text: string;
+  attachments?: { filename: string; contentType: string; inline?: boolean }[];
+};
 
-async function mailbox(page: Page): Promise<Caught[]> {
+export async function mailbox(page: Page): Promise<Caught[]> {
   const res = await page.request.get("/api/v1/dev/mail");
   return ((await res.json()) as { messages: Caught[] }).messages;
 }
 
 /**
- * Requests a magic link and follows it from the dev mailbox. Parallel tests
- * share the mailbox, so only a message that arrived after this request counts.
+ * Requests a magic link and follows it from the dev mailbox. Parallel
+ * workers sign in as the same demo accounts and links work once, so another
+ * worker may use "our" link first; then we request a new one.
  */
 export async function signIn(page: Page, email: string, audience: "staff" | "participant"): Promise<string> {
+  for (let attempt = 1; ; attempt++) {
+    const link = await requestLink(page, email, audience);
+    await page.goto("/dev/mail");
+    await page.locator(`a[href="${link}"]`).click();
+    const failed = page.getByRole("heading", { name: "Couldn't sign you in" });
+    await expect.poll(async () => !page.url().includes("/login/verify") || (await failed.isVisible())).toBe(true);
+    if (!(await failed.isVisible()) || attempt === 3) return link;
+  }
+}
+
+async function requestLink(page: Page, email: string, audience: "staff" | "participant"): Promise<string> {
   const before = new Set((await mailbox(page)).map((m) => m.id));
   await page.goto(audience === "staff" ? "/admin/login" : "/p/login");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
-
   let link = "";
   await expect
     .poll(async () => {
-      const mine = (await mailbox(page)).find((m) => m.to === email && !before.has(m.id));
-      link = mine?.text.match(/https?:\/\/\S+\/login\/verify\?token=\S+/)?.[0] ?? "";
+      // The newest new message: the mailbox lists the latest first.
+      const mine = (await mailbox(page)).filter((m) => m.to === email && !before.has(m.id));
+      link = mine[0]?.text.match(/https?:\/\/\S+\/login\/verify\?token=\S+/)?.[0] ?? "";
       return link;
     })
     .not.toBe("");
-  await page.goto("/dev/mail");
-  await page.locator(`a[href="${link}"]`).click();
   return link;
 }
 

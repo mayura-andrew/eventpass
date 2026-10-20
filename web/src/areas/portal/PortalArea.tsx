@@ -2,18 +2,20 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Navigate, Route, Routes, useNavigate } from "react-router";
+import { Link, Navigate, Route, Routes, useNavigate, useParams } from "react-router";
 import { NotFound } from "../../App";
 import { api, unwrap } from "../../api/client";
 import { LoginPage } from "../../components/LoginPage";
 import { Alert, ErrorAlert, formatDateTime, Loading, Page, StatusBadge, ui } from "../../components/ui";
 import { useMe, useSetup } from "../../session";
+import s from "./portal.module.css";
 
 export default function PortalArea() {
   return (
     <Routes>
       <Route path="login" element={<LoginPage audience="participant" />} />
       <Route index element={<MyEvents />} />
+      <Route path="events/:eventId" element={<PassPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -69,10 +71,67 @@ function MyEvents() {
                   {t("portal.passId")}: <strong className={ui.mono}>{participant.passId}</strong>
                 </span>
               </div>
-              <Alert kind="info">{t("portal.comingSoon")}</Alert>
+              <Link to={`/p/events/${event.id}`} className={ui.button}>
+                {t("portal.openPass")}
+              </Link>
             </article>
           ))}
         </div>
+      </Page>
+    </main>
+  );
+}
+
+function PassPage() {
+  const { t } = useTranslation();
+  const { eventId = "" } = useParams();
+  const me = useMe();
+  const isParticipant = me.data?.kind === "participant";
+  const path = { params: { path: { eventID: eventId } } };
+  const pass = useQuery({
+    queryKey: ["my-pass", eventId],
+    queryFn: () => unwrap(api.GET("/me/events/{eventID}/pass", path)),
+    enabled: isParticipant,
+  });
+
+  if (me.isPending) return <Loading />;
+  if (!isParticipant) return <Navigate to="/p/login" replace />;
+  const base = `/api/v1/me/events/${encodeURIComponent(eventId)}`;
+  return (
+    <main id="main" className={ui.page}>
+      <p>
+        <Link to="/p">← {t("portal.title")}</Link>
+      </p>
+      <Page title={pass.data?.eventName ?? t("portal.pass")}>
+        <ErrorAlert error={pass.error} />
+        {pass.isPending && <Loading />}
+        {pass.data && (
+          <div className={ui.stack}>
+            <div className={ui.row}>
+              <StatusBadge status={pass.data.status} />
+              <span>
+                {t("portal.passId")}: <strong className={ui.mono}>{pass.data.passId}</strong>
+              </span>
+            </div>
+            {!pass.data.active && <Alert kind="warn">{t("portal.inactive")}</Alert>}
+            {pass.data.when && <p>{pass.data.when}</p>}
+            {pass.data.venue && <p>{pass.data.venue}</p>}
+            <img
+              className={s.card}
+              src={`${base}/pass.png`}
+              alt={t("portal.passAlt", { name: pass.data.fullName, passId: pass.data.passId })}
+            />
+            <p className={ui.muted}>{t("portal.showAtEntrance")}</p>
+            <div className={ui.row}>
+              <a className={`${ui.button} ${ui.secondary}`} href={`${base}/pass.png`} download>
+                {t("portal.downloadPng")}
+              </a>
+              <a className={`${ui.button} ${ui.secondary}`} href={`${base}/pass.pdf`} download>
+                {t("portal.downloadPdf")}
+              </a>
+            </div>
+          </div>
+        )}
       </Page>
     </main>
   );

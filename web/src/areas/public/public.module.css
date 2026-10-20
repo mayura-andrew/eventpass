@@ -1,0 +1,35 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+.description {
+  white-space: pre-line;
+}
+
+.form {
+  margin-top: 24px;
+}
+
+.consentText {
+  white-space: pre-line;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  margin: 0 0 8px;
+}
+
+.consent {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-weight: 600;
+  min-height: 44px;
+}
+
+.consent input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+
+.submit {
+  width: 100%;
+}

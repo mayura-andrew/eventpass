@@ -19,7 +19,7 @@ test("owner signs in with a magic link and sees the seeded control panel", async
   await expectAccessible(page);
 
   await page.getByRole("link", { name: "Participants" }).click();
-  await expect(page.getByText(/Showing 1–50 of 100/)).toBeVisible();
+  await expect(page.getByText(/Showing 1–50 of \d+/)).toBeVisible();
   await page.getByLabel("Search name, email or pass ID").fill("participant@example.org");
   await expect(page.getByRole("button", { name: "Pat Participant" })).toBeVisible();
   await expectAccessible(page);

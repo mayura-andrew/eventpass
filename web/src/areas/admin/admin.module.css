@@ -176,3 +176,91 @@
   border: 1px solid var(--line);
   vertical-align: middle;
 }
+
+.builder {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr) 400px;
+  }
+}
+
+.fieldList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.fieldItem {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.previewCol {
+  position: sticky;
+  top: 16px;
+}
+
+.phone {
+  width: 100%;
+  max-width: 375px;
+  max-height: 720px;
+  overflow-y: auto;
+  margin: 8px auto 0;
+  padding: 24px 16px;
+  border: 10px solid var(--ink);
+  border-radius: 36px;
+  background: var(--bg);
+}
+
+.desktop {
+  margin-top: 8px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+
+.checkRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.checkRow input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+
+.block {
+  display: block;
+  font-weight: 400;
+}
+
+.textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.code {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  word-break: break-all;
+}

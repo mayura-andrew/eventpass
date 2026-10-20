@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet, useOutletContext, useParams } from "react-router";
+import { Link, NavLink, Outlet, useOutletContext, useParams } from "react-router";
 import { api, unwrap, type EventSummary } from "../../api/client";
 import { ErrorAlert, formatDateTime, Loading, Page, ui } from "../../components/ui";
 import s from "./admin.module.css";
@@ -37,7 +37,9 @@ export function EventLayout() {
         {(role === "admin" || role === "viewer") && (
           <NavLink to={`${base}/participants`}>{t("admin.event.participants")}</NavLink>
         )}
+        {role === "admin" && event.sheetConnected && <NavLink to={`${base}/form`}>{t("admin.event.form")}</NavLink>}
         {role === "admin" && <NavLink to={`${base}/staff`}>{t("admin.event.staff")}</NavLink>}
+        {role === "admin" && <NavLink to={`${base}/settings`}>{t("admin.event.settings")}</NavLink>}
         {event.status !== "draft" && (
           <a href={`/e/${event.slug}`} target="_blank" rel="noopener">
             {t("admin.event.publicPage")}
@@ -59,13 +61,13 @@ export function EventOverview() {
   const stats = useQuery({
     queryKey: ["stats", event.id],
     queryFn: () => unwrap(api.GET("/events/{eventID}/stats", path)),
-    enabled: canStats,
+    enabled: canStats && !!event.sheetConnected,
     refetchInterval: 5000,
   });
   const activity = useQuery({
     queryKey: ["activity", event.id],
     queryFn: () => unwrap(api.GET("/events/{eventID}/activity", path)),
-    enabled: canStats,
+    enabled: canStats && !!event.sheetConnected,
     refetchInterval: 5000,
   });
 
@@ -77,6 +79,16 @@ export function EventOverview() {
     );
   }
   const total = stats.data?.total ?? 0;
+  if (!event.sheetConnected) {
+    return (
+      <Page title={event.name}>
+        <p className={`${ui.card} ${ui.empty}`}>
+          {t("admin.event.connectFirst")}{" "}
+          <Link to={`/admin/events/${event.id}/settings`}>{t("admin.event.settings")}</Link>
+        </p>
+      </Page>
+    );
+  }
   return (
     <Page title={event.name}>
       <ErrorAlert error={stats.error ?? activity.error} />

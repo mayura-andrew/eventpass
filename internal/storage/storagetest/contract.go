@@ -14,9 +14,21 @@ import (
 	"github.com/mayura-andrew/eventpass/internal/storage"
 )
 
-// Run runs the contract against stores made by newStore. Each subtest gets a
-// fresh store.
-func Run(t *testing.T, newStore func(t *testing.T) storage.Store) {
+// Harness adapts the contract to an adapter.
+type Harness struct {
+	// New returns a fresh, empty store.
+	New func(t *testing.T) storage.Store
+	// Connect attaches storage to a newly created event, for adapters that
+	// need a spreadsheet per event. Nil when events are ready on creation.
+	Connect func(t *testing.T, s storage.Store, eventID string)
+}
+
+var connect func(t *testing.T, s storage.Store, eventID string)
+
+// Run runs the contract. Each subtest gets a fresh store.
+func Run(t *testing.T, h Harness) {
+	connect = h.Connect
+	newStore := h.New
 	tests := map[string]func(*testing.T, storage.Store){
 		"Users":             testUsers,
 		"Events":            testEvents,
@@ -51,6 +63,9 @@ func mustEvent(t *testing.T, s storage.Store) storage.EventRepo {
 	e := domain.Event{EventID: id, Slug: "ev-" + strings.ToLower(id[len(id)-8:]), Name: "Test", Status: domain.EventDraft}
 	if err := s.Workspace().Events().Create(ctx, e); err != nil {
 		t.Fatal(err)
+	}
+	if connect != nil {
+		connect(t, s, e.EventID)
 	}
 	r, err := s.Event(ctx, e.EventID)
 	if err != nil {
@@ -107,6 +122,9 @@ func testEvents(t *testing.T, s storage.Store) {
 	got, err := r.GetBySlug(ctx, "devfest")
 	if err != nil || got.EventID != e.EventID || !got.StartsAt.Equal(e.StartsAt) {
 		t.Fatalf("GetBySlug = %+v, %v", got, err)
+	}
+	if connect != nil {
+		connect(t, s, e.EventID)
 	}
 	if _, err := s.Event(ctx, e.EventID); err != nil {
 		t.Fatalf("Event(created): %v", err)

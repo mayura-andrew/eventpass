@@ -17,8 +17,15 @@ import (
 )
 
 func (s *Server) setupStatus(c *call) error {
-	name := s.productName(c)
-	resp := map[string]any{"complete": true, "demo": s.opt.Demo, "productName": name}
+	settings, err := s.opt.Store.Workspace().Settings().All(c.ctx())
+	if err != nil {
+		return err
+	}
+	// Branding is public: every page, including sign-in, uses it.
+	resp := map[string]any{
+		"complete": true, "demo": s.opt.Demo, "productName": s.productName(c),
+		"primaryColor": settings["primary_color"], "accentColor": settings["accent_color"],
+	}
 	if s.opt.Demo {
 		resp["demoLogins"] = s.opt.DemoLogins
 	}

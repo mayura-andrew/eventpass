@@ -582,6 +582,8 @@ components:
         complete: { type: boolean }
         demo: { type: boolean }
         productName: { type: string }
+        primaryColor: { type: string }
+        accentColor: { type: string }
         demoLogins:
           type: object
           description: Demo mode only; role name to email

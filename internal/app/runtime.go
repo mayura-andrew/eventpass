@@ -394,7 +394,7 @@ func (r *runtime) Complete(ctx context.Context, in api.SetupInput) error {
 	if err := st.Workspace().Settings().Set(ctx, ws, "setup"); err != nil {
 		return err
 	}
-	owner, err := makeOwner(ctx, st, in.OwnerEmail, in.OwnerName, time.Now().UTC())
+	owner, err := upsertUser(ctx, st, in.OwnerEmail, in.OwnerName, domain.WorkspaceOwner)
 	if err != nil {
 		return err
 	}
@@ -410,23 +410,4 @@ func (r *runtime) Complete(ctx context.Context, in api.SetupInput) error {
 	r.activate(st)
 	slog.Info("setup complete", "user", owner.UserID)
 	return nil
-}
-
-// makeOwner creates the owner, or promotes an existing user.
-func makeOwner(ctx context.Context, st storage.Store, email, name string, now time.Time) (domain.User, error) {
-	users := st.Workspace().Users()
-	email = strings.ToLower(strings.TrimSpace(email))
-	u, err := users.GetByEmail(ctx, email)
-	if errors.Is(err, storage.ErrNotFound) {
-		u = domain.User{UserID: domain.NewID(), Email: email, Name: strings.TrimSpace(name),
-			WorkspaceRole: domain.WorkspaceOwner, Status: domain.UserActive, SessionVersion: 1, CreatedAt: now}
-		return u, users.Create(ctx, u)
-	}
-	if err != nil {
-		return u, err
-	}
-	return users.Update(ctx, u.UserID, func(u *domain.User) error {
-		u.WorkspaceRole, u.Status = domain.WorkspaceOwner, domain.UserActive
-		return nil
-	})
 }

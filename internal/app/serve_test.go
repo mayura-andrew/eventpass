@@ -236,16 +236,23 @@ func TestSheetsGateM1(t *testing.T) {
 		t.Fatalf("pass email parts: inline=%v png=%v pdf=%v", inline, png, pdf)
 	}
 
-	rows := ls.fake.Values(eventSheet, "Participants")
-	if len(rows) != 2 {
-		t.Fatalf("Participants tab has %d rows", len(rows))
-	}
+	// The worker marks the row sent just after the message leaves.
+	var rows [][]string
 	col := func(name string) string {
 		i := slices.Index(rows[0], name)
 		if i < 0 || i >= len(rows[1]) {
 			t.Fatalf("no %s column in %v", name, rows[0])
 		}
 		return rows[1][i]
+	}
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(20 * time.Millisecond) {
+		rows = ls.fake.Values(eventSheet, "Participants")
+		if len(rows) != 2 {
+			t.Fatalf("Participants tab has %d rows", len(rows))
+		}
+		if col("PassEmailSentAt") != "" || time.Now().After(deadline) {
+			break
+		}
 	}
 	if col("FullName") != "Grace Hopper" || col("college") != "SLIIT" || col("year") != "2" || col("tshirt") != "M" ||
 		col("Status") != "registered" || col("PassEmailSentAt") == "" {

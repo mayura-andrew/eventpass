@@ -47,6 +47,7 @@ type EventRepo interface {
 	Participants() ParticipantRepo
 	Checkpoints() CheckpointRepo
 	Log() CheckpointLogRepo
+	Outbox() OutboxRepo
 }
 
 // KVRepo is a Key/Value tab (Workspace settings, event Settings).
@@ -138,6 +139,83 @@ type CheckpointLogRepo interface {
 	// Undo marks an entry undone; ErrConflict if it already is.
 	Undo(ctx context.Context, logID, by string, at time.Time) (domain.LogEntry, error)
 }
+
+// OutboxFilter narrows an outbox listing. Zero values match all.
+type OutboxFilter struct {
+	Status        domain.OutboxStatus
+	ParticipantID string
+	Limit         int // newest first
+}
+
+type OutboxRepo interface {
+	// Enqueue appends a row.
+	Enqueue(ctx context.Context, e domain.OutboxEmail) error
+	Get(ctx context.Context, emailID string) (domain.OutboxEmail, error)
+	List(ctx context.Context, f OutboxFilter) ([]domain.OutboxEmail, error)
+	// NextDue returns the queued email with the earliest NextAttemptAt at or
+	// before now, or ErrNotFound.
+	NextDue(ctx context.Context, now time.Time) (domain.OutboxEmail, error)
+	Update(ctx context.Context, emailID string, mutate func(*domain.OutboxEmail) error) (domain.OutboxEmail, error)
+	// SentSince counts emails sent at or after t (for the daily cap).
+	SentSince(ctx context.Context, t time.Time) (int, error)
+}
+
+// FilterOutbox applies f, newest first. Shared by caching adapters.
+func FilterOutbox(all []domain.OutboxEmail, f OutboxFilter) []domain.OutboxEmail {
+	var out []domain.OutboxEmail
+	for i := len(all) - 1; i >= 0; i-- {
+		e := all[i]
+		if (f.Status != "" && e.Status != f.Status) || (f.ParticipantID != "" && e.ParticipantID != f.ParticipantID) {
+			continue
+		}
+		out = append(out, cloneEmail(e))
+		if f.Limit > 0 && len(out) == f.Limit {
+			break
+		}
+	}
+	return out
+}
+
+// NextDueEmail picks the queued email that is due soonest.
+func NextDueEmail(all []domain.OutboxEmail, now time.Time) (domain.OutboxEmail, bool) {
+	var best *domain.OutboxEmail
+	for i := range all {
+		e := &all[i]
+		if e.Status != domain.OutboxQueued || e.NextAttemptAt.After(now) {
+			continue
+		}
+		if best == nil || e.NextAttemptAt.Before(best.NextAttemptAt) {
+			best = e
+		}
+	}
+	if best == nil {
+		return domain.OutboxEmail{}, false
+	}
+	return cloneEmail(*best), true
+}
+
+// CountSentSince counts sent emails at or after t.
+func CountSentSince(all []domain.OutboxEmail, t time.Time) int {
+	n := 0
+	for _, e := range all {
+		if e.Status == domain.OutboxSent && !e.SentAt.Before(t) {
+			n++
+		}
+	}
+	return n
+}
+
+func cloneEmail(e domain.OutboxEmail) domain.OutboxEmail {
+	vars := make(map[string]string, len(e.Vars))
+	for k, v := range e.Vars {
+		vars[k] = v
+	}
+	e.Vars = vars
+	return e
+}
+
+// CloneEmail returns a deep copy.
+func CloneEmail(e domain.OutboxEmail) domain.OutboxEmail { return cloneEmail(e) }
 
 // FilterParticipants applies f to an in-memory list. Adapters that cache a
 // whole tab (memory, sheets) share it so filtering behaves the same.

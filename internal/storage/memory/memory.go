@@ -35,6 +35,7 @@ type eventData struct {
 	participants []domain.Participant
 	checkpoints  []domain.Checkpoint
 	log          []domain.LogEntry
+	outbox       []domain.OutboxEmail
 }
 
 // New returns an empty store.
@@ -84,6 +85,7 @@ func (e event) Fields() storage.FieldRepo             { return fields(e) }
 func (e event) Participants() storage.ParticipantRepo { return participants(e) }
 func (e event) Checkpoints() storage.CheckpointRepo   { return checkpoints(e) }
 func (e event) Log() storage.CheckpointLogRepo        { return logRepo(e) }
+func (e event) Outbox() storage.OutboxRepo            { return outbox(e) }
 
 // ---- Key/Value ----
 
@@ -504,4 +506,70 @@ func (r logRepo) Undo(_ context.Context, logID, by string, at time.Time) (domain
 		return e, nil
 	}
 	return domain.LogEntry{}, storage.ErrNotFound
+}
+
+// ---- Outbox ----
+
+type outbox event
+
+func (r outbox) Enqueue(_ context.Context, e domain.OutboxEmail) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, x := range r.d.outbox {
+		if x.EmailID == e.EmailID {
+			return storage.ErrConflict
+		}
+	}
+	r.d.outbox = append(r.d.outbox, storage.CloneEmail(e))
+	return nil
+}
+
+func (r outbox) Get(_ context.Context, id string) (domain.OutboxEmail, error) {
+	r.s.mu.RLock()
+	defer r.s.mu.RUnlock()
+	for _, e := range r.d.outbox {
+		if e.EmailID == id {
+			return storage.CloneEmail(e), nil
+		}
+	}
+	return domain.OutboxEmail{}, storage.ErrNotFound
+}
+
+func (r outbox) List(_ context.Context, f storage.OutboxFilter) ([]domain.OutboxEmail, error) {
+	r.s.mu.RLock()
+	defer r.s.mu.RUnlock()
+	return storage.FilterOutbox(r.d.outbox, f), nil
+}
+
+func (r outbox) NextDue(_ context.Context, now time.Time) (domain.OutboxEmail, error) {
+	r.s.mu.RLock()
+	defer r.s.mu.RUnlock()
+	if e, ok := storage.NextDueEmail(r.d.outbox, now); ok {
+		return e, nil
+	}
+	return domain.OutboxEmail{}, storage.ErrNotFound
+}
+
+func (r outbox) Update(_ context.Context, id string, mutate func(*domain.OutboxEmail) error) (domain.OutboxEmail, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for i, x := range r.d.outbox {
+		if x.EmailID != id {
+			continue
+		}
+		e := storage.CloneEmail(x)
+		if err := mutate(&e); err != nil {
+			return domain.OutboxEmail{}, err
+		}
+		e.EmailID = id
+		r.d.outbox[i] = storage.CloneEmail(e)
+		return e, nil
+	}
+	return domain.OutboxEmail{}, storage.ErrNotFound
+}
+
+func (r outbox) SentSince(_ context.Context, t time.Time) (int, error) {
+	r.s.mu.RLock()
+	defer r.s.mu.RUnlock()
+	return storage.CountSentSince(r.d.outbox, t), nil
 }

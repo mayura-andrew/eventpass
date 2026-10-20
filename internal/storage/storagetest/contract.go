@@ -28,6 +28,7 @@ func Run(t *testing.T, newStore func(t *testing.T) storage.Store) {
 		"ParticipantCopies": testParticipantCopies,
 		"Checkpoints":       testCheckpoints,
 		"Log":               testLog,
+		"Outbox":            testOutbox,
 	}
 	for name, fn := range tests {
 		t.Run(name, func(t *testing.T) { fn(t, newStore(t)) })
@@ -321,5 +322,58 @@ func testLog(t *testing.T, s storage.Store) {
 	}
 	if _, err := r.Undo(ctx, byP[0].LogID, "staff1", at); !errors.Is(err, storage.ErrConflict) {
 		t.Fatalf("second Undo: %v", err)
+	}
+}
+
+func testOutbox(t *testing.T, s storage.Store) {
+	r := mustEvent(t, s).Outbox()
+	now := ts("2026-10-01T09:00:00Z")
+	mk := func(pid string, due time.Time) domain.OutboxEmail {
+		return domain.OutboxEmail{EmailID: domain.NewID(), CreatedAt: now, ParticipantID: pid, To: pid + "@x.org",
+			TemplateKey: domain.TemplatePassIssued, Vars: map[string]string{"k": "v"}, Status: domain.OutboxQueued, NextAttemptAt: due}
+	}
+	late, early, future := mk("p1", now.Add(time.Minute)), mk("p2", now), mk("p3", now.Add(time.Hour))
+	for _, e := range []domain.OutboxEmail{late, early, future} {
+		if err := r.Enqueue(ctx, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := r.Enqueue(ctx, early); !errors.Is(err, storage.ErrConflict) {
+		t.Fatalf("duplicate email ID: %v", err)
+	}
+	got, err := r.NextDue(ctx, now.Add(2*time.Minute))
+	if err != nil || got.EmailID != early.EmailID || got.Vars["k"] != "v" {
+		t.Fatalf("NextDue = %+v, %v", got, err)
+	}
+	if _, err := r.NextDue(ctx, now.Add(-time.Second)); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("nothing due yet: %v", err)
+	}
+	sentAt := now.Add(30 * time.Second)
+	upd, err := r.Update(ctx, early.EmailID, func(e *domain.OutboxEmail) error {
+		e.Status, e.Attempts, e.SentAt = domain.OutboxSent, 1, sentAt
+		return nil
+	})
+	if err != nil || upd.Status != domain.OutboxSent {
+		t.Fatalf("Update: %+v %v", upd, err)
+	}
+	if n, _ := r.SentSince(ctx, now); n != 1 {
+		t.Fatalf("SentSince = %d", n)
+	}
+	if n, _ := r.SentSince(ctx, sentAt.Add(time.Second)); n != 0 {
+		t.Fatalf("SentSince after = %d", n)
+	}
+	if got, _ := r.NextDue(ctx, now.Add(2*time.Minute)); got.EmailID != late.EmailID {
+		t.Fatalf("sent emails must not be due again; got %s", got.EmailID)
+	}
+	list, _ := r.List(ctx, storage.OutboxFilter{Status: domain.OutboxQueued})
+	if len(list) != 2 || list[0].EmailID != future.EmailID {
+		t.Fatalf("List newest first: %+v", list)
+	}
+	if list, _ := r.List(ctx, storage.OutboxFilter{ParticipantID: "p2"}); len(list) != 1 {
+		t.Fatalf("filter by participant: %d", len(list))
+	}
+	got, _ = r.Get(ctx, early.EmailID)
+	if !got.SentAt.Equal(sentAt) || got.Attempts != 1 {
+		t.Fatalf("Get = %+v", got)
 	}
 }

@@ -18,10 +18,21 @@ import (
 
 // Message is one email with a plain-text part and an optional HTML part.
 type Message struct {
-	To      string `json:"to"`
-	Subject string `json:"subject"`
-	Text    string `json:"text"`
-	HTML    string `json:"html"`
+	To          string       `json:"to"`
+	Subject     string       `json:"subject"`
+	Text        string       `json:"text"`
+	HTML        string       `json:"html"`
+	Attachments []Attachment `json:"attachments,omitempty"`
+}
+
+// Attachment is a file sent with a message. Inline files are referenced from
+// the HTML as cid:<ContentID>, like the QR in the pass email.
+type Attachment struct {
+	Filename    string `json:"filename"`
+	ContentType string `json:"contentType"`
+	Inline      bool   `json:"inline,omitempty"`
+	ContentID   string `json:"contentId,omitempty"`
+	Data        []byte `json:"-"`
 }
 
 // Sender delivers one message.

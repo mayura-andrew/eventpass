@@ -93,3 +93,17 @@ func TestEscapeCSVCell(t *testing.T) {
 		}
 	}
 }
+
+func TestNextRetry(t *testing.T) {
+	now := time.Now()
+	want := []time.Duration{2 * time.Minute, 4 * time.Minute, 8 * time.Minute, 16 * time.Minute}
+	for i, d := range want {
+		at, ok := NextRetry(i+1, now)
+		if !ok || at.Sub(now) != d {
+			t.Errorf("attempt %d: %v %v", i+1, at.Sub(now), ok)
+		}
+	}
+	if _, ok := NextRetry(MaxSendAttempts, now); ok {
+		t.Error("must give up after the last attempt")
+	}
+}

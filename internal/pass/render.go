@@ -106,8 +106,11 @@ func fit(f font.Face, s string, maxWidth int) string {
 	return string(r) + "…"
 }
 
-func text(dst draw.Image, f font.Face, s string, x, y int, c color.Color, center bool, maxWidth int) {
-	s = fit(f, s, maxWidth)
+// textWidth is the usable width of the 600 px card.
+const textWidth = 600 - 64
+
+func text(dst draw.Image, f font.Face, s string, x, y int, c color.Color, center bool) {
+	s = fit(f, s, textWidth)
 	if center {
 		x -= font.MeasureString(f, s).Ceil() / 2
 	}
@@ -146,10 +149,10 @@ func CardPNG(c Card) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	text(img, small, c.ProductName, 32, 48, ink, false, w-64)
-	text(img, title, c.EventName, 32, 100, ink, false, w-64)
+	text(img, small, c.ProductName, 32, 48, ink, false)
+	text(img, title, c.EventName, 32, 100, ink, false)
 	if c.When != "" {
-		text(img, small, c.When, 32, 134, ink, false, w-64)
+		text(img, small, c.When, 32, 134, ink, false)
 	}
 
 	qrPNG, err := QRPNG(c.Token, 400)
@@ -162,24 +165,24 @@ func CardPNG(c Card) ([]byte, error) {
 	}
 	draw.Draw(img, image.Rect(100, 170, 500, 570), qr, image.Point{}, draw.Src)
 
-	text(img, mono, c.PassID, w/2, 610, dark, true, w-64)
-	text(img, name, c.FullName, w/2, 670, dark, true, w-64)
+	text(img, mono, c.PassID, w/2, 610, dark, true)
+	text(img, name, c.FullName, w/2, 670, dark, true)
 	y := 715
 	if c.Venue != "" {
-		text(img, small, c.Venue, w/2, y, muted, true, w-64)
+		text(img, small, c.Venue, w/2, y, muted, true)
 		y += 34
 	}
 	for _, l := range c.Lines {
 		if y > h-40 {
 			break
 		}
-		text(img, small, l.Label+": "+l.Value, w/2, y, muted, true, w-64)
+		text(img, small, l.Label+": "+l.Value, w/2, y, muted, true)
 		y += 30
 	}
 	if c.Inactive {
 		red := color.RGBA{R: 0x8a, G: 0x1c, B: 0x1c, A: 255}
 		draw.Draw(img, image.Rect(0, 330, w, 410), image.NewUniform(red), image.Point{}, draw.Src)
-		text(img, title, strings.ToUpper(c.StatusLabel), w/2, 382, color.White, true, w-64)
+		text(img, title, strings.ToUpper(c.StatusLabel), w/2, 382, color.White, true)
 	}
 
 	var buf bytes.Buffer

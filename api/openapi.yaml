@@ -806,3 +806,13 @@ components:
         subject: { type: string }
         text: { type: string }
         html: { type: string }
+        attachments:
+          type: array
+          items:
+            type: object
+            required: [filename, contentType]
+            properties:
+              filename: { type: string }
+              contentType: { type: string }
+              inline: { type: boolean }
+              contentId: { type: string }

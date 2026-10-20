@@ -655,6 +655,12 @@ export interface components {
       subject: string;
       text: string;
       html: string;
+      attachments?: {
+        filename: string;
+        contentType: string;
+        inline?: boolean;
+        contentId?: string;
+      }[];
     };
   };
   responses: {

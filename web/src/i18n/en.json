@@ -1,0 +1,223 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "remove": "Remove",
+    "add": "Add",
+    "search": "Search",
+    "previous": "Previous",
+    "next": "Next",
+    "signOut": "Sign out",
+    "skipToContent": "Skip to content",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This page doesn't exist or has moved.",
+    "goHome": "Go to the start page",
+    "saved": "Saved.",
+    "close": "Close",
+    "showing": "Showing {{from}}–{{to}} of {{total}}"
+  },
+  "errors": {
+    "unauthenticated": "Sign in to continue.",
+    "forbidden": "You don't have permission to do that.",
+    "not_found": "Not found.",
+    "csrf_missing": "Your request was blocked. Reload the page and try again.",
+    "rate_limited": "Too many requests. Wait a minute and try again.",
+    "busy": "The spreadsheet is busy. Try again in a few seconds.",
+    "validation_failed": "Some values need fixing.",
+    "invalid_json": "The request was malformed.",
+    "invalid_link": "This sign-in link is invalid, used or expired. Request a new one.",
+    "email_taken": "That email is already in use.",
+    "slug_taken": "Another event already uses that URL.",
+    "last_owner": "The workspace needs at least one active owner.",
+    "invalid_transition": "That status change isn't allowed.",
+    "network": "Can't reach the server. Check your connection.",
+    "internal": "Something went wrong. Try again.",
+    "conflict": "That value is already in use."
+  },
+  "fieldErrors": {
+    "required": "Required.",
+    "too_short": "Too short.",
+    "too_long": "Too long.",
+    "too_small": "Too small.",
+    "too_large": "Too large.",
+    "invalid_email": "Enter a valid email address.",
+    "invalid_phone": "Enter a valid phone number.",
+    "invalid_number": "Enter a number.",
+    "invalid_date": "Enter a valid date.",
+    "invalid_url": "Enter a web address starting with https://.",
+    "invalid_option": "Choose one of the options.",
+    "invalid_boolean": "Invalid value.",
+    "pattern_mismatch": "Doesn't match the expected format.",
+    "invalid_slug": "Use lowercase letters, numbers and dashes.",
+    "invalid_time_zone": "Unknown time zone.",
+    "invalid_length": "Must be 1–120 characters.",
+    "invalid_color": "Use a color like #1B4DDB.",
+    "unknown_setting": "Unknown setting.",
+    "ends_before_start": "Ends before it starts."
+  },
+  "status": {
+    "pending_approval": "Pending approval",
+    "waitlisted": "Waitlisted",
+    "registered": "Registered",
+    "confirmed": "Confirmed",
+    "checked_in": "Checked in",
+    "cancelled": "Cancelled",
+    "rejected": "Rejected"
+  },
+  "eventStatus": {
+    "draft": "Draft",
+    "published": "Published",
+    "registration_closed": "Registration closed",
+    "finished": "Finished",
+    "archived": "Archived"
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "staff": "Staff",
+    "viewer": "Viewer",
+    "none": "No workspace role",
+    "participant": "Participant"
+  },
+  "login": {
+    "staffTitle": "Sign in to the control panel",
+    "participantTitle": "Open your pass",
+    "participantIntro": "Enter the email you registered with. We'll send you a link to your pass and schedule.",
+    "staffIntro": "Enter your email and we'll send you a sign-in link. No password needed.",
+    "email": "Email",
+    "send": "Email me a sign-in link",
+    "sending": "Sending…",
+    "sentTitle": "Check your inbox",
+    "sentBody": "If {{email}} can sign in, a link is on its way. It works once and expires in 15 minutes. Check your spam folder too.",
+    "tryAgain": "Use a different email",
+    "demoTitle": "Demo mode",
+    "demoBody": "Emails are not sent. Request a link, then open the dev mailbox to click it.",
+    "openMail": "Open the dev mailbox",
+    "demoAccounts": "Demo accounts",
+    "verifying": "Signing you in…",
+    "verifyFailed": "Couldn't sign you in",
+    "requestNew": "Request a new link",
+    "participantLink": "Registered for an event? Open your pass",
+    "staffLink": "Organizer or staff? Sign in here"
+  },
+  "admin": {
+    "nav": {
+      "label": "Control panel",
+      "events": "Events",
+      "users": "Users",
+      "settings": "Workspace",
+      "audit": "Audit log",
+      "system": "System"
+    },
+    "events": {
+      "title": "Events",
+      "empty": "No events yet. Create one to start taking registrations.",
+      "noAccess": "You haven't been added to any event yet. Ask an admin to give you a role.",
+      "create": "Create event",
+      "name": "Event name",
+      "slug": "URL name",
+      "slugHint": "Used in the public page address: /e/{{slug}}",
+      "timeZone": "Time zone",
+      "startsAt": "Starts",
+      "yourRole": "Your role",
+      "created": "Event created."
+    },
+    "event": {
+      "overview": "Overview",
+      "participants": "Participants",
+      "staff": "Staff",
+      "stats": "Live counts",
+      "total": "Registered in total",
+      "checkpoints": "Checkpoints",
+      "doneOf": "{{done}} of {{total}}",
+      "activity": "Recent activity",
+      "noActivity": "Nothing has happened yet. Scans and admin changes appear here.",
+      "publicPage": "Public page"
+    },
+    "participants": {
+      "title": "Participants",
+      "search": "Search name, email or pass ID",
+      "statusFilter": "Status",
+      "allStatuses": "All statuses",
+      "empty": "No participants match.",
+      "none": "No participants yet. They appear here as people register.",
+      "name": "Name",
+      "passId": "Pass ID",
+      "status": "Status",
+      "registered": "Registered",
+      "edit": "Edit participant",
+      "notes": "Staff notes",
+      "changeStatus": "Change status",
+      "saved": "Participant saved."
+    },
+    "staff": {
+      "title": "Staff and viewers",
+      "intro": "Staff scan passes and look people up. Viewers see the dashboard and participant list but can't change anything.",
+      "empty": "No one has a role in this event yet. Add staff for scanning on the day.",
+      "add": "Add person",
+      "email": "Email",
+      "name": "Name",
+      "role": "Role",
+      "removeConfirm": "Remove {{name}} from this event? They lose access straight away.",
+      "added": "Access granted. They can sign in with their email."
+    },
+    "users": {
+      "title": "Users",
+      "intro": "People who can sign in to the control panel. Event roles are managed on each event's Staff page.",
+      "add": "Add user",
+      "disable": "Disable",
+      "enable": "Enable",
+      "signOutAll": "Sign out everywhere",
+      "disabled": "Disabled",
+      "lastLogin": "Last sign-in",
+      "never": "Never",
+      "disableConfirm": "Disable {{name}}? They're signed out on every device and can't sign in until re-enabled."
+    },
+    "settings": {
+      "title": "Workspace",
+      "productName": "Product name",
+      "productNameHint": "Shown in the header, browser title, emails and passes.",
+      "primaryColor": "Primary color",
+      "accentColor": "Accent color",
+      "timeZone": "Default time zone",
+      "supportEmail": "Support email",
+      "footerText": "Footer text",
+      "privacyUrl": "Privacy policy URL",
+      "termsUrl": "Terms URL",
+      "lowContrast": "White text on this primary color is below the WCAG AA contrast ratio of 4.5:1. Pick a darker color so buttons stay readable."
+    },
+    "audit": {
+      "title": "Audit log",
+      "empty": "No actions recorded yet.",
+      "time": "Time",
+      "actor": "Who",
+      "action": "Action",
+      "target": "Target"
+    },
+    "system": {
+      "title": "System",
+      "version": "Version",
+      "storage": "Storage",
+      "uptime": "Uptime",
+      "demo": "Demo mode"
+    }
+  },
+  "portal": {
+    "title": "Your events",
+    "empty": "No registrations found for {{email}}.",
+    "passId": "Pass ID",
+    "comingSoon": "Your QR pass, schedule and map appear here once the organizer issues passes."
+  },
+  "scan": {
+    "title": "Scanner",
+    "comingSoon": "Scanning arrives in the next release. Use the participant lookup in the control panel meanwhile."
+  },
+  "public": {
+    "notFound": "This event isn't open to the public.",
+    "venue": "Venue",
+    "registrationSoon": "Registration opens here soon."
+  }
+}

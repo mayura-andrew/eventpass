@@ -1,0 +1,154 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* Design tokens. Workspace colors override --primary and --accent at runtime
+   (see theme.ts); everything else derives from them. */
+:root {
+  --primary: #1b4ddb;
+  --primary-ink: #ffffff;
+  --accent: #e8590c;
+
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --ink: #1a1d23;
+  --ink-2: #4d5462;
+  --line: #d6dae1;
+  --focus: #1b4ddb;
+
+  --ok-bg: #e6f4ea;
+  --ok-ink: #135c2b;
+  --warn-bg: #fff4d6;
+  --warn-ink: #6b4a00;
+  --bad-bg: #fde8e8;
+  --bad-ink: #8a1c1c;
+  --info-bg: #e8eefc;
+  --info-ink: #1a3a8f;
+
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 2px 8px rgb(0 0 0 / 6%);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Sinhala", "Noto Sans Tamil", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --tap: 48px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111318;
+    --surface: #1a1d24;
+    --surface-2: #232731;
+    --ink: #e9ebef;
+    --ink-2: #a8aebb;
+    --line: #2f3440;
+    --focus: #8fb0ff;
+    --ok-bg: #12301d;
+    --ok-ink: #9be3b0;
+    --warn-bg: #3a2e0a;
+    --warn-ink: #f5d27a;
+    --bad-bg: #3d1515;
+    --bad-ink: #f4a6a6;
+    --info-bg: #17254a;
+    --info-ink: #aec4ff;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #111318;
+  --surface: #1a1d24;
+  --surface-2: #232731;
+  --ink: #e9ebef;
+  --ink-2: #a8aebb;
+  --line: #2f3440;
+  --focus: #8fb0ff;
+  --ok-bg: #12301d;
+  --ok-ink: #9be3b0;
+  --warn-bg: #3a2e0a;
+  --warn-ink: #f5d27a;
+  --bad-bg: #3d1515;
+  --bad-ink: #f4a6a6;
+  --info-bg: #17254a;
+  --info-ink: #aec4ff;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--font);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  margin: 0 0 0.5em;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+}
+
+a {
+  color: var(--primary);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Headings receive focus on route change; no ring for that programmatic focus. */
+h1:focus {
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

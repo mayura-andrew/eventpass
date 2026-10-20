@@ -9,14 +9,16 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/mayura-andrew/eventpass/internal/api"
 	"github.com/mayura-andrew/eventpass/internal/auth"
 	"github.com/mayura-andrew/eventpass/internal/mail"
-	"github.com/mayura-andrew/eventpass/internal/storage"
+	"github.com/mayura-andrew/eventpass/internal/pass"
 	"github.com/mayura-andrew/eventpass/internal/storage/memory"
 )
 
@@ -30,47 +32,72 @@ func NewLogger(c Config) *slog.Logger {
 }
 
 // Serve runs the server until ctx is cancelled, then shuts down gracefully:
-// in-flight requests finish and queued email is sent.
+// in-flight requests finish, the email being sent is recorded and queued
+// sign-in links go out.
 func Serve(ctx context.Context, c Config, version string, static fs.FS) error {
-	var (
-		store   storage.Store
-		catcher *mail.Catcher
-		sender  mail.Sender
-		logins  map[string]string
-	)
-	switch {
-	case c.Demo:
+	return serve(ctx, c, version, static, nil)
+}
+
+// serve takes an optional hook that adjusts the runtime before it opens
+// storage; tests use it to point at the Sheets fake.
+func serve(ctx context.Context, c Config, version string, static fs.FS, hook func(*runtime)) error {
+	if c.Demo && c.SecretKey == nil {
+		c.SecretKey = make([]byte, 32)
+		_, _ = rand.Read(c.SecretKey)
+		slog.Warn("EVENTPASS_SECRET_KEY not set: using a random key, so sessions end when the server restarts")
+	}
+	if c.Storage == "memory" && !c.Demo {
+		return errors.New("STORAGE=memory is only supported with EVENTPASS_DEMO=1 for now")
+	}
+	keys, err := pass.LoadKeyRing(filepath.Join(c.DataDir, "keys"))
+	if err != nil {
+		return fmt.Errorf("load pass signing keys: %w", err)
+	}
+	codec, err := auth.NewCodec(c.SecretKey)
+	if err != nil {
+		return err
+	}
+
+	workers, stopWorkers := context.WithCancel(context.WithoutCancel(ctx))
+	defer stopWorkers()
+	var secrets map[string]string
+	if !c.Demo {
+		if secrets, err = LoadSecrets(c.DataDir, c.SecretKey); err != nil {
+			return err
+		}
+	}
+	rt := newRuntime(workers, c, secrets, keys)
+	if hook != nil {
+		hook(rt)
+	}
+	queue := mail.NewQueue(rt.sender, 256)
+	defer queue.Close()
+
+	opt := api.Options{
+		Sessions: codec, Links: auth.NewMagicLinks(), Mail: queue, Keys: keys, NotifyOutbox: rt.notify,
+		HealthExtra: rt.health, PublicURL: c.PublicURL, StorageName: c.Storage, Version: version,
+		TrustProxy: c.TrustProxy, Demo: c.Demo, Static: static,
+	}
+	if c.Demo {
 		mem := memory.New()
 		info, err := memory.Seed(ctx, mem)
 		if err != nil {
 			return fmt.Errorf("seed demo data: %w", err)
 		}
-		store, logins = mem, info.Emails
-		catcher = mail.NewCatcher()
-		sender = catcher
-		if c.SecretKey == nil {
-			c.SecretKey = make([]byte, 32)
-			_, _ = rand.Read(c.SecretKey)
-			slog.Warn("EVENTPASS_SECRET_KEY not set: using a random key, so sessions end when the server restarts")
-		}
-	case c.Storage == "memory":
-		return errors.New("STORAGE=memory is only supported with EVENTPASS_DEMO=1 for now")
-	default:
-		return errors.New("the Google Sheets adapter arrives in milestone M1; run with EVENTPASS_DEMO=1 to try EventPass")
+		opt.Catcher, opt.DemoLogins = mail.NewCatcher(), info.Emails
+		rt.sender.set(opt.Catcher)
+		opt.Store = mem
+	} else {
+		opt.Setup = rt
 	}
-
-	codec, err := auth.NewCodec(c.SecretKey)
-	if err != nil {
+	srv := api.New(opt)
+	rt.srv = srv
+	if c.Demo {
+		rt.activate(opt.Store)
+	} else if err := rt.open(ctx); err != nil {
 		return err
 	}
-	queue := mail.NewQueue(sender, 256)
-	defer queue.Close()
 
-	srv := api.New(api.Options{
-		Store: store, Sessions: codec, Links: auth.NewMagicLinks(), Mail: queue,
-		PublicURL: c.PublicURL, StorageName: c.Storage, Version: version, TrustProxy: c.TrustProxy,
-		Demo: c.Demo, Catcher: catcher, DemoLogins: logins, Static: static,
-	})
 	httpSrv := &http.Server{
 		Addr:              c.Addr,
 		Handler:           srv.Handler(),
@@ -79,17 +106,26 @@ func Serve(ctx context.Context, c Config, version string, static fs.FS) error {
 		WriteTimeout:      60 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", c.Addr)
+	if err != nil {
+		return err
+	}
+	slog.Info("EventPass listening", "addr", ln.Addr().String(), "url", c.PublicURL, "storage", c.Storage, "demo", c.Demo, "version", version)
+	switch {
+	case c.Demo:
+		slog.Info("demo mode: sign in at "+c.PublicURL+"/admin/login and open "+c.PublicURL+"/dev/mail for the link",
+			"owner", opt.DemoLogins["owner"])
+	case !rt.State(ctx).Complete:
+		// The token is the only thing standing between a fresh install and
+		// whoever reaches it first, so it goes to the log, never the browser.
+		slog.Warn("setup needed: open "+c.PublicURL+"/admin/setup and enter this setup token", "token", rt.Token())
+	}
+	if rt.addr != nil {
+		rt.addr <- ln.Addr().String()
+	}
 
 	errc := make(chan error, 1)
-	go func() {
-		slog.Info("EventPass listening", "addr", c.Addr, "url", c.PublicURL, "storage", c.Storage, "demo", c.Demo, "version", version)
-		if c.Demo {
-			slog.Info("demo mode: sign in at "+c.PublicURL+"/admin/login and open "+c.PublicURL+"/dev/mail for the link",
-				"owner", logins["owner"])
-		}
-		errc <- httpSrv.ListenAndServe()
-	}()
-
+	go func() { errc <- httpSrv.Serve(ln) }()
 	select {
 	case err := <-errc:
 		return err
@@ -98,8 +134,8 @@ func Serve(ctx context.Context, c Config, version string, static fs.FS) error {
 	slog.Info("shutting down")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-		return err
-	}
-	return nil
+	err = httpSrv.Shutdown(shutdownCtx)
+	stopWorkers()
+	rt.wait()
+	return err
 }

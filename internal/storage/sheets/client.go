@@ -51,13 +51,26 @@ type Client struct {
 // NewClient connects with a service account key file. Extra options let
 // tests point the client at the fake.
 func NewClient(ctx context.Context, credentialsFile string, perMin int, extra ...option.ClientOption) (*Client, error) {
-	opts := extra
+	var key []byte
 	if credentialsFile != "" {
 		b, err := os.ReadFile(credentialsFile) //nolint:gosec // G304: path comes from GOOGLE_APPLICATION_CREDENTIALS
 		if err != nil {
 			return nil, fmt.Errorf("read service account key %s: %w", credentialsFile, err)
 		}
-		opts = append([]option.ClientOption{option.WithAuthCredentialsJSON(option.ServiceAccount, b),
+		key = b
+	}
+	return NewClientJSON(ctx, key, perMin, extra...)
+}
+
+// NewClientJSON connects with a service account key given as JSON, e.g.
+// pasted into the setup wizard and kept in the encrypted secrets file.
+func NewClientJSON(ctx context.Context, key []byte, perMin int, extra ...option.ClientOption) (*Client, error) {
+	opts := extra
+	if len(key) > 0 {
+		if _, err := ServiceAccountEmailJSON(key); err != nil {
+			return nil, err
+		}
+		opts = append([]option.ClientOption{option.WithAuthCredentialsJSON(option.ServiceAccount, key),
 			option.WithScopes(sheetsapi.SpreadsheetsScope)}, opts...)
 	}
 	svc, err := sheetsapi.NewService(ctx, opts...)
@@ -77,6 +90,11 @@ func ServiceAccountEmail(credentialsFile string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return ServiceAccountEmailJSON(b)
+}
+
+// ServiceAccountEmailJSON reads client_email from a key's JSON.
+func ServiceAccountEmailJSON(b []byte) (string, error) {
 	var k struct {
 		Type        string `json:"type"`
 		ClientEmail string `json:"client_email"`
@@ -166,6 +184,13 @@ type Stats struct {
 func (c *Client) Stats() Stats {
 	return Stats{ReadsLastMinute: c.reads.UsedLastMinute(), WritesLastMinute: c.writes.UsedLastMinute(),
 		Retries: c.retried.Load(), BusyErrors: c.busy.Load()}
+}
+
+// SpreadsheetTitle opens a spreadsheet and returns its title: the cheapest
+// check that the service account can reach it.
+func (c *Client) SpreadsheetTitle(ctx context.Context, id string) (string, error) {
+	info, err := c.info(ctx, id)
+	return info.Title, err
 }
 
 // sheetInfo describes the tabs of a spreadsheet.

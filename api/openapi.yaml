@@ -942,6 +942,17 @@ components:
         venue: { type: string }
         statusLabel: { type: string }
 
+    Validation:
+      type: object
+      additionalProperties: false
+      properties:
+        minLength: { type: integer }
+        maxLength: { type: integer }
+        min: { type: number }
+        max: { type: number }
+        pattern: { type: string }
+        patternMessage: { type: string }
+        maxFileMB: { type: integer }
     FieldInput:
       type: object
       additionalProperties: false
@@ -953,7 +964,7 @@ components:
         placeholder: { type: string }
         required: { type: boolean }
         options: { type: array, items: { type: string } }
-        validation: { type: object }
+        validation: { $ref: '#/components/schemas/Validation' }
         editable: { type: string, enum: ["no", until, until_checkin, always] }
         editableUntil: { type: string, format: date-time }
         visibility: { type: string, enum: [public, participant, staff, admin] }
@@ -1092,7 +1103,9 @@ components:
         settings: { type: object, additionalProperties: { type: string } }
         sheetConnected: { type: boolean }
         spreadsheetId: { type: string }
-
+        serviceAccountEmail:
+          type: string
+          description: Admins only, while no spreadsheet is connected; share the event's spreadsheet with this address
     EventInput:
       type: object
       additionalProperties: false
@@ -1127,16 +1140,7 @@ components:
         placeholder: { type: string }
         required: { type: boolean }
         options: { type: array, items: { type: string } }
-        validation:
-          type: object
-          properties:
-            minLength: { type: integer }
-            maxLength: { type: integer }
-            min: { type: number }
-            max: { type: number }
-            pattern: { type: string }
-            patternMessage: { type: string }
-            maxFileMB: { type: integer }
+        validation: { $ref: '#/components/schemas/Validation' }
         editable: { type: string, enum: ["no", until, until_checkin, always] }
         editableUntil: { type: string, format: date-time }
         visibility: { type: string, enum: [public, participant, staff, admin] }

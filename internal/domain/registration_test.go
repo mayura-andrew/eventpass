@@ -107,3 +107,23 @@ func TestNextRetry(t *testing.T) {
 		t.Error("must give up after the last attempt")
 	}
 }
+
+func TestNextConsentVersion(t *testing.T) {
+	for _, c := range []struct {
+		cur  map[string]string
+		text string
+		want string
+		bump bool
+	}{
+		{map[string]string{}, "", "", false},
+		{map[string]string{}, "Be kind.", "1", true},
+		{map[string]string{"consent_text": "Be kind."}, "Be kind.", "", false},
+		{map[string]string{"consent_text": "Be kind."}, "Be kind. No photos.", "2", true},
+		{map[string]string{"consent_text": "A", "consent_version": "4"}, "B", "5", true},
+	} {
+		got, bump := NextConsentVersion(c.cur, c.text)
+		if got != c.want || bump != c.bump {
+			t.Errorf("NextConsentVersion(%v, %q) = %q, %v; want %q, %v", c.cur, c.text, got, bump, c.want, c.bump)
+		}
+	}
+}

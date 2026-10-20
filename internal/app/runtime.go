@@ -246,6 +246,15 @@ func (r *runtime) health() map[string]any {
 	return out
 }
 
+// serviceAccountEmail is shown to admins connecting an event spreadsheet.
+func (r *runtime) serviceAccountEmail() string {
+	if r.cfg.Demo {
+		return ""
+	}
+	email, _ := r.settings().ServiceAccountEmail()
+	return email
+}
+
 // wait blocks until background workers have stopped (after ctx ends).
 func (r *runtime) wait() { r.wg.Wait() }
 

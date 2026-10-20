@@ -44,9 +44,11 @@ type eventJSON struct {
 	CreatedAt *time.Time `json:"createdAt,omitempty"`
 	Role      string     `json:"role,omitempty"` // the caller's effective role
 	// SheetConnected is false for a Sheets event without a spreadsheet yet.
-	SheetConnected bool              `json:"sheetConnected"`
-	SpreadsheetID  string            `json:"spreadsheetId,omitempty"`
-	Settings       map[string]string `json:"settings,omitempty"`
+	SheetConnected bool   `json:"sheetConnected"`
+	SpreadsheetID  string `json:"spreadsheetId,omitempty"`
+	// ServiceAccountEmail tells admins whom to share a new sheet with.
+	ServiceAccountEmail string            `json:"serviceAccountEmail,omitempty"`
+	Settings            map[string]string `json:"settings,omitempty"`
 }
 
 func toEvent(e domain.Event, role domain.EventRole) eventJSON {

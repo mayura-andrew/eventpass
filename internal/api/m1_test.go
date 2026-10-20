@@ -224,6 +224,9 @@ func TestFieldBuilder(t *testing.T) {
 	if strings.Contains(string(pub.body), `"github"`) {
 		t.Fatal("hidden field still on the public form")
 	}
+	if r := f.do("PUT", base+"github", map[string]any{"type": "url", "label": "GitHub", "editable": "always", "visibility": "staff"}, admin); r.status != http.StatusOK || !strings.Contains(string(r.body), `"hidden":false`) {
+		t.Fatalf("restore hidden field: %d %s", r.status, r.body)
+	}
 	r = f.do("POST", base+"order", map[string]any{"keys": []string{"email", "full_name", "college"}}, admin)
 	var list struct{ Fields []fieldJSON }
 	_ = json.Unmarshal(r.body, &list)

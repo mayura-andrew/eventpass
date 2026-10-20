@@ -141,6 +141,9 @@ func (s *Server) createEvent(c *call) error {
 func (s *Server) getEvent(c *call) error {
 	out := toEvent(c.event, c.role)
 	out.SheetConnected = c.repo != nil
+	if !out.SheetConnected && c.role == domain.EventAdmin && s.opt.ServiceAccountEmail != nil {
+		out.ServiceAccountEmail = s.opt.ServiceAccountEmail()
+	}
 	if c.repo != nil {
 		settings, err := c.repo.Settings().All(c.ctx())
 		if err != nil {
@@ -161,6 +164,15 @@ func (s *Server) patchEvent(c *call) error {
 	}
 	if len(in.Settings) > 0 && c.repo == nil {
 		return errSheetNotLinked
+	}
+	if text, ok := in.Settings["consent_text"]; ok {
+		cur, err := c.repo.Settings().All(c.ctx())
+		if err != nil {
+			return err
+		}
+		if v, bump := domain.NextConsentVersion(cur, text); bump {
+			in.Settings["consent_version"] = v
+		}
 	}
 	e, err := s.store().Workspace().Events().Update(c.ctx(), c.event.EventID, func(e *domain.Event) error {
 		in.apply(e)

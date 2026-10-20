@@ -49,7 +49,17 @@ func serve(ctx context.Context, c Config, version string, static fs.FS, hook fun
 	if c.Storage == "memory" && !c.Demo {
 		return errors.New("STORAGE=memory is only supported with EVENTPASS_DEMO=1 for now")
 	}
-	keys, err := pass.LoadKeyRing(filepath.Join(c.DataDir, "keys"))
+	keysDir := filepath.Join(c.DataDir, "keys")
+	if c.Demo {
+		// Demo data lives in memory and resets on restart; so do its keys.
+		dir, err := os.MkdirTemp("", "eventpass-demo-keys-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(dir)
+		keysDir = dir
+	}
+	keys, err := pass.LoadKeyRing(keysDir)
 	if err != nil {
 		return fmt.Errorf("load pass signing keys: %w", err)
 	}
@@ -75,7 +85,7 @@ func serve(ctx context.Context, c Config, version string, static fs.FS, hook fun
 
 	opt := api.Options{
 		Sessions: codec, Links: auth.NewMagicLinks(), Mail: queue, Keys: keys, NotifyOutbox: rt.notify,
-		HealthExtra: rt.health, PublicURL: c.PublicURL, StorageName: c.Storage, Version: version,
+		HealthExtra: rt.health, ServiceAccountEmail: rt.serviceAccountEmail, PublicURL: c.PublicURL, StorageName: c.Storage, Version: version,
 		TrustProxy: c.TrustProxy, Demo: c.Demo, Static: static,
 	}
 	if c.Demo {
@@ -85,6 +95,7 @@ func serve(ctx context.Context, c Config, version string, static fs.FS, hook fun
 			return fmt.Errorf("seed demo data: %w", err)
 		}
 		opt.Catcher, opt.DemoLogins = mail.NewCatcher(), info.Emails
+		opt.RelaxedSignInLimits = true
 		rt.sender.set(opt.Catcher)
 		opt.Store = mem
 	} else {

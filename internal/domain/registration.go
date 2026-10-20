@@ -71,6 +71,18 @@ func ParseEventSettings(m map[string]string) EventSettings {
 	return s
 }
 
+// NextConsentVersion returns the version to store when an admin saves
+// consent text: a changed text is a new version, so each participant's
+// recorded ConsentVersion keeps pointing at the text they agreed to.
+func NextConsentVersion(cur map[string]string, text string) (string, bool) {
+	if strings.TrimSpace(text) == strings.TrimSpace(cur["consent_text"]) || strings.TrimSpace(text) == "" {
+		return "", false
+	}
+	v := ParseEventSettings(cur).ConsentVersion
+	n, _ := strconv.Atoi(v)
+	return strconv.Itoa(n + 1), true
+}
+
 // ValidateEventSettings checks values an admin is saving. It returns
 // field → code using the "settings." prefix the API reports.
 func ValidateEventSettings(m map[string]string) map[string]string {

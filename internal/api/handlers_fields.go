@@ -81,9 +81,7 @@ func (s *Server) putField(c *call) error {
 			f.Order = max(f.Order, x.Order+1)
 		}
 	}
-	if exists {
-		f.Hidden = existing.Hidden
-	}
+	// Saving a field shows it again: that is how a hidden field is restored.
 	errs := domain.ValidateFieldDef(f)
 	if uploadTypes[f.Type] {
 		errs["type"] = "not_available_yet"

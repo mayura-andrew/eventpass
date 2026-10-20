@@ -40,12 +40,20 @@ type Options struct {
 	Catcher    *mail.Catcher
 	DemoLogins map[string]string
 
+	// RelaxedSignInLimits raises the magic-link rate limits for the demo,
+	// where every visitor shares a few accounts and mail never leaves the
+	// server (ADR 0005).
+	RelaxedSignInLimits bool
+
 	// Keys sign pass tokens.
 	Keys *pass.KeyRing
 	// NotifyOutbox wakes the outbox worker after an email is queued.
 	NotifyOutbox func(eventID string)
 	// Setup runs the first-run wizard; nil when setup isn't needed (demo).
 	Setup Setup
+	// ServiceAccountEmail is the Google account admins share event
+	// spreadsheets with; nil without Sheets.
+	ServiceAccountEmail func() string
 	// HealthExtra adds adapter details (Sheets quota, cache ages) to the
 	// system page.
 	HealthExtra func() map[string]any
@@ -84,6 +92,11 @@ func New(opt Options) *Server {
 		linkIP:   newLimiter(10, time.Minute, 10),
 		linkMail: newLimiter(5, 15*time.Minute, 3),
 		authIP:   newLimiter(20, time.Minute, 20),
+	}
+	if opt.RelaxedSignInLimits {
+		s.linkIP = newLimiter(120, time.Minute, 60)
+		s.linkMail = newLimiter(120, 15*time.Minute, 60)
+		s.authIP = newLimiter(120, time.Minute, 60)
 	}
 	if opt.Store != nil {
 		s.SetStore(opt.Store)

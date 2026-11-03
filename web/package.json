@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.5",
-    "i18next": "26.5.3",
+    "i18next": "26.5.12",
     "openapi-fetch": "0.17.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",

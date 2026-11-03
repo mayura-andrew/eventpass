@@ -2,7 +2,7 @@
 
 Self-hosted event registration, QR passes and check-in that runs for free on a Google Sheet, a Gmail account and one small server.
 
-> **Status: early development (milestone M0, foundation).** The demo runs end to end for sign-in and the control panel. Registration, passes, scanning, schedule and maps arrive in milestones M1–M3. See [PROGRESS.md](PROGRESS.md).
+> **Status: early development (milestone M1, register and pass).** Registration, the form builder, QR passes by email (inline, PNG and PDF) and the participant portal work in the demo and with Google Sheets. Scanning, schedule and maps arrive in milestones M2–M3. See [PROGRESS.md](PROGRESS.md).
 
 ## Try the demo in one command
 
@@ -22,6 +22,18 @@ Open <http://localhost:8080/admin/login>, pick a demo account, then open <http:/
 | viewer@example.org | Viewer on DevFest Colombo 2026 |
 | participant@example.org | Participant (portal at `/p/login`) |
 
+## Run it with Google Sheets and Gmail
+
+```sh
+(cd web && npm ci && npm run build) && go build -o eventpass ./cmd/eventpass
+./eventpass keygen > .env          # EVENTPASS_SECRET_KEY; keep it safe
+./eventpass serve
+```
+
+The log prints a setup token. Open <http://localhost:8080/admin/setup>, enter it and follow the wizard: it connects Google Sheets, tests email and creates your owner account. Guides: [Google Sheets](docs/guide/google-setup.md), [Gmail](docs/guide/gmail-setup.md). Run `./eventpass check` at any time to verify the setup.
+
+Other commands: `eventpass admin add <email> [--owner]`, `eventpass migrate`, `eventpass export <event> --out file.csv`, `eventpass keygen --pass` (rotate the pass signing key).
+
 ## Development
 
 ```sh
@@ -38,15 +50,17 @@ Run the Go server on :8080 and `npm run dev` in `web/` for hot reload; Vite prox
 ## Layout
 
 ```
-cmd/eventpass/      CLI: serve, keygen, version
+cmd/eventpass/      CLI: serve, check, admin, migrate, export, keygen, version
+internal/app/       config, secrets, setup wizard, wiring
 internal/domain/    every business rule, no I/O
-internal/storage/   repository interfaces, contract tests, memory adapter
+internal/storage/   repository interfaces, contract tests, memory and Sheets adapters
 internal/auth/      magic links, encrypted sessions
-internal/mail/      dev mail catcher and send queue
+internal/pass/      signed pass tokens, QR, PNG and PDF passes
+internal/mail/      SMTP, templates, persisted outbox, dev mail catcher
 internal/api/       HTTP handlers; each route declares its permission
 api/openapi.yaml    API source of truth
 web/                React + TypeScript app, embedded into the binary
-docs/               milestone plans and decision records
+docs/               guides, milestone plans and decision records
 reference/          the prototype, read-only
 ```
 

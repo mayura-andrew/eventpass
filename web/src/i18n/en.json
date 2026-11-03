@@ -225,7 +225,21 @@
       "version": "Version",
       "storage": "Storage",
       "uptime": "Uptime",
-      "demo": "Demo mode"
+      "demo": "Demo mode",
+      "email": "Email",
+      "emailCapped": "Daily cap reached: queued emails wait for the 24-hour window",
+      "emailOk": "Sending normally",
+      "sheets": "Google Sheets",
+      "reads": "Reads in the last minute",
+      "writes": "Writes in the last minute",
+      "ofQuota": "{{used}} of {{quota}}",
+      "retries": "Retried requests",
+      "busy": "Requests that gave up (busy)",
+      "cacheCaption": "Cached tabs. Manual edits in a sheet show up after {{ttl}} s.",
+      "tab": "Tab",
+      "age": "Cache age",
+      "seconds_one": "{{count}} s",
+      "seconds_other": "{{count}} s"
     },
     "form": {
       "title": "Registration form",

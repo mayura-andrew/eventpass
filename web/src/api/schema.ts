@@ -849,6 +849,20 @@ export interface components {
       demo: boolean;
       uptimeSeconds: number;
       goVersion: string;
+      /** @description True while the daily email cap holds outbox mail back */
+      emailCapped?: boolean;
+      /** @description Google Sheets storage only */
+      sheets?: {
+        quotaPerMinute: number;
+        readsLastMinute: number;
+        writesLastMinute: number;
+        retries: number;
+        busyErrors: number;
+        cacheTtlSeconds: number;
+        cacheAgeSeconds: {
+          [key: string]: number;
+        };
+      };
     };
     Event: {
       id: string;

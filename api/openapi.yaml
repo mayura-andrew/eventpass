@@ -1086,6 +1086,21 @@ components:
         demo: { type: boolean }
         uptimeSeconds: { type: integer }
         goVersion: { type: string }
+        emailCapped:
+          type: boolean
+          description: True while the daily email cap holds outbox mail back
+        sheets:
+          type: object
+          description: Google Sheets storage only
+          required: [quotaPerMinute, readsLastMinute, writesLastMinute, retries, busyErrors, cacheTtlSeconds, cacheAgeSeconds]
+          properties:
+            quotaPerMinute: { type: integer }
+            readsLastMinute: { type: integer }
+            writesLastMinute: { type: integer }
+            retries: { type: integer }
+            busyErrors: { type: integer }
+            cacheTtlSeconds: { type: integer }
+            cacheAgeSeconds: { type: object, additionalProperties: { type: integer } }
 
     Event:
       type: object

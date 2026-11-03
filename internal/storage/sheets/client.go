@@ -43,6 +43,7 @@ type Client struct {
 	writes  *limiter
 	backoff []time.Duration
 	sleep   func(context.Context, time.Duration) error
+	perMin  int
 
 	retried atomic.Int64
 	busy    atomic.Int64
@@ -80,7 +81,7 @@ func NewClientJSON(ctx context.Context, key []byte, perMin int, extra ...option.
 	return &Client{
 		svc: svc, reads: newLimiter(perMin), writes: newLimiter(perMin),
 		backoff: []time.Duration{500 * time.Millisecond, time.Second, 2 * time.Second, 4 * time.Second},
-		sleep:   sleepCtx,
+		sleep:   sleepCtx, perMin: perMin,
 	}, nil
 }
 
@@ -175,6 +176,7 @@ func (c *Client) do(ctx context.Context, write bool, fn func() error) error {
 
 // Stats is quota and retry information for the health page.
 type Stats struct {
+	QuotaPerMinute   int   `json:"quotaPerMinute"`
 	ReadsLastMinute  int   `json:"readsLastMinute"`
 	WritesLastMinute int   `json:"writesLastMinute"`
 	Retries          int64 `json:"retries"`
@@ -182,7 +184,7 @@ type Stats struct {
 }
 
 func (c *Client) Stats() Stats {
-	return Stats{ReadsLastMinute: c.reads.UsedLastMinute(), WritesLastMinute: c.writes.UsedLastMinute(),
+	return Stats{QuotaPerMinute: c.perMin, ReadsLastMinute: c.reads.UsedLastMinute(), WritesLastMinute: c.writes.UsedLastMinute(),
 		Retries: c.retried.Load(), BusyErrors: c.busy.Load()}
 }
 

@@ -22,6 +22,17 @@ Open <http://localhost:8080/admin/login>, pick a demo account, then open <http:/
 | viewer@example.org | Viewer on DevFest Colombo 2026 |
 | participant@example.org | Participant (portal at `/p/login`) |
 
+### Run the demo with Docker
+
+Requires Docker and Docker Compose:
+
+```sh
+docker compose up --build
+```
+
+Open <http://localhost:8080/admin/login>. Stop it with `Ctrl-C`, or run
+`docker compose down`. The container uses demo mode and does not send email.
+
 ## Run it with Google Sheets and Gmail
 
 ```sh
